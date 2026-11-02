@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <queries>
+    <intent><action android:name="android.media.action.IMAGE_CAPTURE" /></intent>
+  </queries>
   <application
     android:label="MaSalle"
     android:icon="@mipmap/ic_launcher"
@@ -17,5 +20,13 @@
         <category android:name="android.intent.category.LAUNCHER" />
       </intent-filter>
     </activity>
+    <!-- Photo du plan prise avec l'appareil photo, enregistrée dans le cache de l'appli. -->
+    <provider
+      android:name="androidx.core.content.FileProvider"
+      android:authorities="io.github.navy999.masalle.photos"
+      android:exported="false"
+      android:grantUriPermissions="true">
+      <meta-data android:name="android.support.FILE_PROVIDER_PATHS" android:resource="@xml/file_paths" />
+    </provider>
   </application>
 </manifest>

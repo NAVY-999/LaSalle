@@ -62,6 +62,7 @@
 body{margin:0}
 [hidden]{display:none!important}
 .hdr{display:flex;align-items:center;justify-content:space-between;gap:10px}
+[hidden]{display:none!important}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
@@ -212,6 +213,8 @@ svg.plan{width:100%;height:100%;display:block;touch-action:none;user-select:none
 .cal .d.on{background:var(--orange);color:var(--on-orange)}
 .cal .d.today{box-shadow:inset 0 0 0 2px var(--ink)}
 .cal .d.out{background:transparent}
+.ph-cv{display:block;width:100%;margin:0 auto;border-radius:10px;background:var(--surface-2);touch-action:none;cursor:crosshair}
+input[type=range]{width:100%;accent-color:var(--orange)}
 .count{font-family:var(--font-display);font-weight:900;font-stretch:70%;font-size:48px;line-height:.9;color:var(--orange-text)}
 /* profil : séries par muscle, machines */
 .sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
@@ -281,7 +284,7 @@ const IC={
   check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   edit:'<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/>',play:'<path d="M7 4.5v15l12-7.5z"/>',
   fit:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',chevd:'<path d="M6 9l6 6 6-6"/>',
-  prev:'<path d="M15 6l-6 6 6 6"/>',next:'<path d="M9 6l6 6-6 6"/>',wall:'<path d="M4 20V4M4 4h16"/>',ruler:'<path d="M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2"/>'};
+  prev:'<path d="M15 6l-6 6 6 6"/>',next:'<path d="M9 6l6 6-6 6"/>',wall:'<path d="M4 20V4M4 4h16"/>',camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',ruler:'<path d="M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2"/>'};
 const ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
 
 /* ============ état ============ */
@@ -564,7 +567,7 @@ function renderSalle(main){
   let h=`<div class="sv-bar gut"><div class="row" style="flex-wrap:nowrap"><button class="gym-pick grow" data-act="openGyms"><span class="grow"><span class="eyebrow">${S.gyms.length>1?`Salle · ${S.gyms.length} enregistrées`:'Salle'}</span><span class="h2">${esc(gym.name)}</span></span>${ic('chevd')}</button>`;
   h+=ui.edit?`<button class="btn sm" data-act="editDone">${ic('check')} Terminé</button>`:`<button class="btn sm dark" data-act="editStart">${ic('edit')} Modifier</button>`;
   h+=`</div>`;
-  if(ui.edit)h+=`<div class="tools"><button class="tool go" data-act="addMachine">${ic('plus')}Machine</button><button class="tool${ui.tool==='wall'?' on':''}" data-act="toolWall">${ic('wall')}Mur</button><button class="tool" data-act="gymSettings">${ic('ruler')}Nom et taille</button></div>`;
+  if(ui.edit)h+=`<div class="tools"><button class="tool go" data-act="addMachine">${ic('plus')}Machine</button><button class="tool${ui.tool==='wall'?' on':''}" data-act="toolWall">${ic('wall')}Mur</button><button class="tool" data-act="phOpen">${ic('camera')}Photo du plan</button><button class="tool" data-act="gymSettings">${ic('ruler')}Nom et taille</button></div>`;
   h+=`</div><div class="maphost" id="mapHost"></div>${ui.edit?'<div class="insp gut" id="insp"></div>':''}`;
   main.innerHTML=h;
   mountMap($('#mapHost'),gym.id,ui.edit?'edit':'view','salle');
@@ -659,6 +662,7 @@ function showSheet(keep){
   el._top=top;el.hidden=false;$('#scrim').hidden=false;
   el.querySelector('.sh-body').scrollTop=st;
   if(aeId){const n=document.getElementById(aeId);if(n){n.focus();try{const v=n.value.length;n.setSelectionRange(v,v)}catch(_){}}}
+  top.after?.(el,top);
 }
 function refreshSheet(){if(ui.sheets.length)showSheet(true)}
 const top_=()=>ui.sheets[ui.sheets.length-1];
@@ -781,6 +785,183 @@ function sheetPlan(){
     foot:`<button class="btn" data-act="pbSave"${pb.items.length?'':' disabled'}>Enregistrer la séance</button>`};
 }
 
+/* ============ salle depuis une photo du plan ============ */
+// La photo est redressée grâce aux 4 coins touchés, puis les longs traits sombres horizontaux
+// et verticaux deviennent des murs. Les murs extérieurs viennent déjà du contour de la salle.
+const PH={};
+const SENS={k:[0.34,0.27,0.21,0.16,0.12],len:[0.075,0.06,0.048,0.038,0.03],fill:[0.8,0.76,0.72,0.68,0.64],ink:[95,110,125,140,155]};
+function openPhotoImport(){
+  const g=curGym();for(const k in PH)delete PH[k];
+  Object.assign(PH,{gymId:g.id,src:null,corners:[],w:g.w,h:g.h,sens:3});
+  pushSheet(sheetPhoto,{full:true,after:drawPhoto});
+}
+function sheetPhoto(){
+  if(!PH.src)return{eyebrow:'Salle depuis une photo · 1/3',title:'Photo du plan',body:`<p class="muted">Prends en photo le plan de ta salle, par exemple le plan d'évacuation affiché au mur : bien de face, en entier. Les murs seront tracés tout seuls, tes machines ne bougent pas.</p>
+    <label class="btn">${ic('camera')} Prendre ou choisir une photo<input type="file" id="phFile" data-ch="phFile" accept="image/*" hidden></label>`};
+  if(!PH.walls)return{eyebrow:'Salle depuis une photo · 2/3',title:'Touche les 4 coins',body:`<p class="small muted">Touche les 4 angles des murs extérieurs de la salle sur la photo (${PH.corners.length}/4).</p>
+    <canvas id="phCv" class="ph-cv"></canvas>
+    <div class="row"><button class="btn ghost sm" data-act="phReset"${PH.corners.length?'':' disabled'}>Recommencer</button><button class="btn ghost sm" data-act="phWhole">Toute la photo</button></div>`};
+  const n=PH.walls.length;
+  return{eyebrow:'Salle depuis une photo · 3/3',title:`${n} mur${n>1?'s':''} trouvé${n>1?'s':''}`,body:`<canvas id="phCv" class="ph-cv"></canvas>
+    <div class="row"><label class="field grow"><span>Largeur réelle (m)</span><input class="inp" id="phW" data-ch="phDim" data-k="w" inputmode="decimal" value="${fmt(PH.w)}"></label><label class="field grow"><span>Profondeur réelle (m)</span><input class="inp" id="phH" data-ch="phDim" data-k="h" inputmode="decimal" value="${fmt(PH.h)}"></label></div>
+    <label class="field"><span>Sensibilité · ${PH.sens}/5</span><input type="range" id="phSens" data-ch="phSens" min="1" max="5" step="1" value="${PH.sens}"></label>
+    <p class="small muted">Trop de faux murs : baisse la sensibilité. Des murs manquent : monte-la. Tu pourras ensuite corriger à la main.</p>
+    <button class="btn ghost sm" data-act="phReset" style="align-self:flex-start">Refaire les coins</button>`,
+    foot:`<button class="btn" data-act="phApply"${n?'':' disabled'}>Remplacer les murs</button>`};
+}
+async function loadPhoto(file){
+  if(!file)return;
+  const url=URL.createObjectURL(file);
+  try{
+    const img=await new Promise((ok,ko)=>{const i=new Image();i.onload=()=>ok(i);i.onerror=ko;i.src=url});
+    const k=Math.min(1,1600/Math.max(img.naturalWidth,img.naturalHeight)),c=document.createElement('canvas');
+    c.width=Math.round(img.naturalWidth*k);c.height=Math.round(img.naturalHeight*k);
+    c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+    Object.assign(PH,{src:c,corners:[],walls:null,gray:null});refreshSheet();
+  }catch(e){toast("Impossible d'ouvrir cette photo")}finally{URL.revokeObjectURL(url)}
+}
+function drawPhoto(el){
+  const cv=el.querySelector('#phCv'),img=PH.walls?PH.rect:PH.src;if(!cv||!img)return;
+  const dpr=window.devicePixelRatio||1,cw=cv.clientWidth||300,maxH=Math.max(220,window.innerHeight*0.55);
+  let s=cw/img.width;if(img.height*s>maxH)s=maxH/img.height;
+  cv.style.width=img.width*s+'px';cv.style.height=img.height*s+'px';
+  cv.width=Math.round(img.width*s*dpr);cv.height=Math.round(img.height*s*dpr);
+  const c=cv.getContext('2d');c.setTransform(s*dpr,0,0,s*dpr,0,0);
+  if(PH.walls){
+    c.globalAlpha=0.45;c.drawImage(img,0,0);c.globalAlpha=1;
+    c.strokeStyle='#161616';c.lineWidth=7/s;c.strokeRect(0,0,img.width,img.height);
+    c.strokeStyle='#FE7000';c.lineWidth=5/s;c.lineCap='round';
+    for(const w of PH.walls){c.beginPath();c.moveTo(w.x1/PH.w*img.width,w.y1/PH.h*img.height);c.lineTo(w.x2/PH.w*img.width,w.y2/PH.h*img.height);c.stroke()}
+    return;
+  }
+  c.drawImage(img,0,0);
+  const P=PH.corners;
+  if(P.length){
+    c.strokeStyle='#FE7000';c.lineWidth=3/s;c.beginPath();P.forEach((p,i)=>i?c.lineTo(p[0],p[1]):c.moveTo(p[0],p[1]));if(P.length===4)c.closePath();c.stroke();
+    for(const p of P){c.beginPath();c.arc(p[0],p[1],9/s,0,7);c.fillStyle='#FE7000';c.fill();c.lineWidth=3/s;c.strokeStyle='#FFFFFF';c.stroke()}
+  }
+  cv.onpointerdown=e=>{
+    const r=cv.getBoundingClientRect();
+    PH.corners.push([(e.clientX-r.left)/r.width*img.width,(e.clientY-r.top)/r.height*img.height]);
+    if(PH.corners.length===4){PH.corners=refineCorners(PH.src,PH.corners);runDetect(true)}
+    refreshSheet();
+  };
+}
+// Recale chaque coin touché sur l'angle des murs extérieurs le plus proche (le doigt est imprécis).
+function refineCorners(src,P){
+  const q=orderCorners(P),w=src.width,h=src.height,d=src.getContext('2d').getImageData(0,0,w,h).data;
+  const lum=(x,y)=>{x|=0;y|=0;if(x<0||y<0||x>=w||y>=h)return 255;const i=(y*w+x)*4,R=d[i],G=d[i+1],B=d[i+2];return 0.299*R+0.587*G+0.114*B+1.2*(Math.max(R,G,B)-Math.min(R,G,B))};
+  const rad=Math.round(Math.max(w,h)*0.025),len=rad*2;
+  return q.map((p,i)=>{
+    const dir=o=>{const dx=o[0]-p[0],dy=o[1]-p[1],n=Math.hypot(dx,dy)||1;return[dx/n,dy/n]},ua=dir(q[(i+1)%4]),ub=dir(q[(i+3)%4]);
+    let sum=0,n=0;for(let y=-2*rad;y<=2*rad;y+=4)for(let x=-2*rad;x<=2*rad;x+=4){sum+=lum(p[0]+x,p[1]+y);n++}
+    const thr=Math.min(175,sum/n*0.7);let best=null;
+    for(let dy=-rad;dy<=rad;dy++)for(let dx=-rad;dx<=rad;dx++){
+      const x=p[0]+dx,y=p[1]+dy;if(lum(x,y)>=thr)continue;
+      let sc=0;for(let t=2;t<=len;t+=2){if(lum(x+ua[0]*t,y+ua[1]*t)<thr)sc++;if(lum(x+ub[0]*t,y+ub[1]*t)<thr)sc++}
+      const dist=dx*dx+dy*dy;if(!best||sc>best.sc||(sc===best.sc&&dist<best.dist))best={sc,dist,x,y};
+    }
+    return best&&best.sc>=len*0.6?[best.x,best.y]:p;
+  });
+}
+function orderCorners(P){
+  const cx=P.reduce((a,p)=>a+p[0],0)/4,cy=P.reduce((a,p)=>a+p[1],0)/4;
+  const q=P.slice().sort((a,b)=>Math.atan2(a[1]-cy,a[0]-cx)-Math.atan2(b[1]-cy,b[0]-cx));
+  let i=0;q.forEach((p,k)=>{if(p[0]+p[1]<q[i][0]+q[i][1])i=k});
+  return q.slice(i).concat(q.slice(0,i)); // haut-gauche, haut-droit, bas-droit, bas-gauche
+}
+function homography(src,dst){
+  const M=[];
+  for(let i=0;i<4;i++){const[x,y]=src[i],[X,Y]=dst[i];M.push([x,y,1,0,0,0,-x*X,-y*X,X]);M.push([0,0,0,x,y,1,-x*Y,-y*Y,Y])}
+  for(let c=0;c<8;c++){
+    let p=c;for(let r=c+1;r<8;r++)if(Math.abs(M[r][c])>Math.abs(M[p][c]))p=r;[M[c],M[p]]=[M[p],M[c]];
+    for(let r=0;r<8;r++){if(r===c)continue;const f=M[r][c]/M[c][c];for(let k=c;k<9;k++)M[r][k]-=f*M[c][k]}
+  }
+  return M.map((r,i)=>r[8]/r[i]).concat(1);
+}
+function rectify(src,q,W,H){
+  const sw=src.width,sh=src.height,sd=src.getContext('2d').getImageData(0,0,sw,sh).data,h=homography([[0,0],[W,0],[W,H],[0,H]],q);
+  const out=document.createElement('canvas');out.width=W;out.height=H;
+  const oc=out.getContext('2d'),od=oc.createImageData(W,H),o=od.data,gray=new Uint8ClampedArray(W*H);
+  for(let v=0;v<H;v++)for(let u=0;u<W;u++){
+    const U_=u+0.5,V_=v+0.5,d=h[6]*U_+h[7]*V_+1,x=(h[0]*U_+h[1]*V_+h[2])/d,y=(h[3]*U_+h[4]*V_+h[5])/d;
+    const si=(clamp(y|0,0,sh-1)*sw+clamp(x|0,0,sw-1))*4,oi=(v*W+u)*4,R=sd[si],G=sd[si+1],B=sd[si+2];
+    o[oi]=R;o[oi+1]=G;o[oi+2]=B;o[oi+3]=255;
+    gray[v*W+u]=0.299*R+0.587*G+0.114*B+1.2*(Math.max(R,G,B)-Math.min(R,G,B)); // la couleur éclaircit : les murs sont noirs ou gris
+  }
+  oc.putImageData(od,0,0);return{canvas:out,gray};
+}
+// Bandes sombres longues et fines, ligne par ligne (murs horizontaux) ou colonne par colonne (verticaux).
+// Chaque pixel regarde aussi ses voisins à ±3 px en travers : un plan légèrement penché (coins touchés au doigt) reste détecté.
+const SPREAD=3;
+function bands(dark,W,H,minLen,vert){
+  const A=vert?W:H,B=vert?H:W,done=[];let open=[];
+  const at=(a,b)=>{for(let k=Math.max(0,a-SPREAD);k<=Math.min(A-1,a+SPREAD);k++)if(vert?dark[b*W+k]:dark[k*W+b])return 1;return 0};
+  for(let a=0;a<A;a++){
+    const runs=[];let s=-1,last=-9;
+    for(let b=0;b<B;b++){
+      if(!at(a,b))continue;
+      if(s<0||b-last>2){if(s>=0&&last-s+1>=minLen)runs.push([s,last]);s=b}
+      last=b;
+    }
+    if(s>=0&&last-s+1>=minLen)runs.push([s,last]);
+    const next=[];
+    for(const r of runs){
+      const c=open.find(c=>!c.used&&Math.min(r[1],c.le)-Math.max(r[0],c.ls)>=0.5*Math.min(r[1]-r[0],c.le-c.ls));
+      if(c){c.used=true;c.a1=a;c.s=Math.min(c.s,r[0]);c.e=Math.max(c.e,r[1]);c.ls=r[0];c.le=r[1];next.push(c)}
+      else next.push({a0:a,a1:a,s:r[0],e:r[1],ls:r[0],le:r[1],used:true});
+    }
+    for(const c of open)if(!c.used)done.push(c);
+    next.forEach(c=>c.used=false);open=next;
+  }
+  return done.concat(open).map(c=>({p:(c.a0+c.a1)/2,s:c.s,e:c.e,a0:Math.max(0,c.a0),a1:Math.min(A-1,c.a1),t:Math.max(1,c.a1-c.a0+1-2*SPREAD)}));
+}
+function detectWalls(g,W,H,sens){
+  const k=SENS.k[sens-1],L=Math.max(W,H),minLen=Math.round(L*SENS.len[sens-1]);
+  const R=Math.max(10,Math.round(L/20)),ii=new Float64Array((W+1)*(H+1));
+  for(let y=0;y<H;y++){let row=0;for(let x=0;x<W;x++){row+=g[y*W+x];ii[(y+1)*(W+1)+x+1]=ii[y*(W+1)+x+1]+row}}
+  const dark=new Uint8Array(W*H);
+  for(let y=0;y<H;y++){const y0=Math.max(0,y-R),y1=Math.min(H,y+R+1);for(let x=0;x<W;x++){
+    const x0=Math.max(0,x-R),x1=Math.min(W,x+R+1),m=(ii[y1*(W+1)+x1]-ii[y0*(W+1)+x1]-ii[y1*(W+1)+x0]+ii[y0*(W+1)+x0])/((y1-y0)*(x1-x0)),v=g[y*W+x];
+    dark[y*W+x]=v<m*(1-k)&&v<175?1:0}}
+  const maxT=L*0.035,minT=sens===1?3:2,covMin=SENS.fill[sens-1],inkMax=SENS.ink[sens-1];
+  // Un mur couvre toute sa longueur avec un trait foncé ; le texte est haché, les contours de machines sont gris.
+  const solid=(x,vert)=>{
+    let cov=0,dk=0,sum=0;
+    for(let b=x.s;b<=x.e;b++){let hit=0;for(let a=x.a0;a<=x.a1;a++){const i=vert?b*W+a:a*W+b;if(dark[i]){hit=1;dk++;sum+=g[i]}}cov+=hit}
+    return dk&&cov/(x.e-x.s+1)>=covMin+0.15&&sum/dk<=inkMax;
+  };
+  const keep=(b,ext,vert)=>b.filter(x=>x.t>=minT&&x.t<=maxT&&x.e-x.s>=minLen&&x.p>ext*0.035&&x.p<ext*0.965&&solid(x,vert));
+  const merge=list=>{
+    list.sort((a,b)=>a.p-b.p||a.s-b.s);const out=[];
+    for(const x of list){
+      const m=out.find(o=>Math.abs(o.p-x.p)<=Math.max(6,(o.t+x.t)/2+SPREAD)&&x.s<=o.e+L*0.012&&x.e>=o.s-L*0.012);
+      if(m){const a=m.e-m.s,b=x.e-x.s;m.p=(m.p*a+x.p*b)/(a+b);m.s=Math.min(m.s,x.s);m.e=Math.max(m.e,x.e);m.t=Math.max(m.t,x.t)}else out.push({...x});
+    }
+    return out;
+  };
+  let hs=merge(keep(bands(dark,W,H,minLen,false),H,false)),vs=merge(keep(bands(dark,W,H,minLen,true),W,true));
+  // bouts collés aux murs perpendiculaires et au contour
+  const tol=L*0.02,stick=(segs,cross,ext)=>segs.forEach(x=>{
+    for(const end of['s','e']){
+      const c=cross.filter(o=>Math.abs(o.p-x[end])<=o.t/2+tol&&x.p>=o.s-tol&&x.p<=o.e+tol).sort((a,b)=>Math.abs(a.p-x[end])-Math.abs(b.p-x[end]))[0];
+      if(c)x[end]=c.p;else if(x[end]<ext*0.05)x[end]=0;else if(x[end]>ext*0.95)x[end]=ext;
+    }
+  });
+  stick(hs,vs,W);stick(vs,hs,H);
+  const all=hs.map(x=>({x1:x.s,y1:x.p,x2:x.e,y2:x.p,l:x.e-x.s})).concat(vs.map(x=>({x1:x.p,y1:x.s,x2:x.p,y2:x.e,l:x.e-x.s})));
+  return all.sort((a,b)=>b.l-a.l).slice(0,60);
+}
+function runDetect(again){
+  if(again||!PH.gray){
+    const q=orderCorners(PH.corners),L=900,ar=PH.w/PH.h,W=ar>=1?L:Math.round(L*ar),H=ar>=1?Math.round(L/ar):L;
+    const r=rectify(PH.src,q,W,H);Object.assign(PH,{rect:r.canvas,gray:r.gray,W,H});
+  }
+  PH.walls=detectWalls(PH.gray,PH.W,PH.H,PH.sens)
+    .map(s=>({x1:snap(s.x1/PH.W*PH.w),y1:snap(s.y1/PH.H*PH.h),x2:snap(s.x2/PH.W*PH.w),y2:snap(s.y2/PH.H*PH.h)}))
+    .filter(s=>Math.hypot(s.x2-s.x1,s.y2-s.y1)>=0.5);
+}
+
 /* ============ séance en cours ============ */
 function startSession(planId){
   const p=getPlan(planId),gym=getGym(p?.gymId);if(!gym)return;
@@ -875,6 +1056,16 @@ const ACT={
   copyData:()=>{const code=exportCode(),ta=$('#codeOut'),fb=()=>{if(ta){ta.hidden=false;ta.value=code;ta.focus();ta.select()}toast('Copie le code affiché')};try{navigator.clipboard.writeText(code).then(()=>toast('Données copiées'),fb)}catch(e){fb()}},
   openImport:()=>pushSheet(()=>({title:'Importer mes données',body:`<textarea class="inp" id="codeIn" rows="6" placeholder="Colle ici le code copié depuis la version Claude" aria-label="Code à importer"></textarea>`,foot:`<button class="btn" data-act="doImport">Importer</button>`})),
   doImport:()=>importCode($('#codeIn').value),
+  phOpen:()=>openPhotoImport(),
+  phReset:()=>{PH.corners=[];PH.walls=null;PH.gray=null;refreshSheet()},
+  phWhole:()=>{const s=PH.src;PH.corners=[[0,0],[s.width,0],[s.width,s.height],[0,s.height]];runDetect(true);refreshSheet()},
+  phApply:()=>{
+    const g=getGym(PH.gymId);if(!g)return;
+    g.w=PH.w;g.h=PH.h;
+    g.items=g.items.filter(i=>i.kind!=='wall').concat(PH.walls.map(w=>({id:uid('w'),kind:'wall',...w})));
+    for(const m of machinesOf(g)){m.x=clamp(m.x,0,Math.max(0,g.w-m.w));m.y=clamp(m.y,0,Math.max(0,g.h-m.h))}
+    const n=PH.walls.length;ui.sel=null;Store.saveMain();closeAllSheets();render();toast(`${n} mur${n>1?'s':''} placé${n>1?'s':''} : corrige ce qui ne va pas`);
+  },
   calMove:d=>{const c=ui.cal,t=new Date(c.y,c.m+(+d.d),1);ui.cal={y:t.getFullYear(),m:t.getMonth()};render()},
 };
 const IN={
@@ -894,7 +1085,12 @@ const IN={
 };
 document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const fn=ACT[el.dataset.act];if(fn){e.preventDefault();fn(el.dataset,el,e)}});
 document.addEventListener('input',e=>{const el=e.target.closest('[data-in]');if(el)IN[el.dataset.in]?.(el,e)});
-const CH={mRename:el=>renameMachine(top_(),el.value)};
+const CH={
+  mRename:el=>renameMachine(top_(),el.value),
+  phFile:el=>loadPhoto(el.files?.[0]),
+  phDim:el=>{const v=num(el.value);if(v>=4&&v<=150){PH[el.dataset.k]=v;runDetect(true);refreshSheet()}},
+  phSens:el=>{PH.sens=clamp(Math.round(num(el.value)),1,5);runDetect(false);refreshSheet()},
+};
 document.addEventListener('change',e=>{const el=e.target.closest('[data-ch]');if(el)CH[el.dataset.ch]?.(el,e)});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ui.sheets.length)popSheet()});
 document.addEventListener('focusin',e=>{if(e.target.matches?.('.wt input'))setTimeout(()=>{try{e.target.select()}catch(_){}},0)});
