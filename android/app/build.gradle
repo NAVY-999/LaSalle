@@ -1,0 +1,33 @@
+plugins { id 'com.android.application' }
+
+def vc = (project.findProperty('versionCode') ?: '1') as int
+
+android {
+  namespace 'io.github.navy999.masalle'
+  compileSdk 34
+  defaultConfig {
+    applicationId 'io.github.navy999.masalle'
+    minSdk 24
+    targetSdk 34
+    versionCode vc
+    versionName "1.${vc}"
+  }
+  // La clé vient des secrets du dépôt (MASALLE_KEYSTORE) ; sans eux, le workflow en crée une temporaire.
+  signingConfigs {
+    release {
+      storeFile file(System.getenv('MASALLE_KEYSTORE_FILE') ?: 'missing.keystore')
+      storePassword System.getenv('MASALLE_KEY_PASSWORD') ?: ''
+      keyAlias 'masalle'
+      keyPassword System.getenv('MASALLE_KEY_PASSWORD') ?: ''
+    }
+  }
+  buildTypes {
+    release { minifyEnabled false; signingConfig signingConfigs.release }
+  }
+  compileOptions {
+    sourceCompatibility JavaVersion.VERSION_17
+    targetCompatibility JavaVersion.VERSION_17
+  }
+}
+
+dependencies { implementation 'androidx.webkit:webkit:1.11.0' }

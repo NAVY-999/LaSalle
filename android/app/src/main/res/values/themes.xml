@@ -1,0 +1,9 @@
+<resources>
+  <color name="graphite">#1C1C1A</color>
+  <color name="paper">#F3F2EF</color>
+  <style name="AppTheme" parent="android:Theme.Material.Light.NoActionBar">
+    <item name="android:statusBarColor">@color/graphite</item>
+    <item name="android:navigationBarColor">@color/graphite</item>
+    <item name="android:windowBackground">@color/paper</item>
+  </style>
+</resources>

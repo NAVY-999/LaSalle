@@ -1,0 +1,6 @@
+android/app/src/main/assets/index.html
+android/app/src/main/assets/icon-192.png
+android/.gradle/
+android/build/
+android/app/build/
+*.keystore

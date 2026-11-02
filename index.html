@@ -65,7 +65,8 @@ body{margin:0}
 html,body{height:100%}
 body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
 body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
-button,input{font:inherit;color:inherit}
+button,input,textarea{font:inherit;color:inherit}
+textarea.inp{resize:vertical;font-size:13px;word-break:break-all}
 button{cursor:pointer;background:none;border:0;padding:0}
 :focus-visible{outline:3px solid var(--orange);outline-offset:2px}
 svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
@@ -604,8 +605,24 @@ function viewProfil(){
     <section class="card stack"><div class="cal-h"><span class="h2 grow">Mes jours de salle</span><button class="ib" data-act="calMove" data-d="-1" aria-label="Mois précédent">${ic('prev')}</button><button class="ib" data-act="calMove" data-d="1" aria-label="Mois suivant">${ic('next')}</button></div>
     <div class="row" style="align-items:baseline"><span class="count">${cnt}</span><span class="muted">${cnt>1?'jours':'jour'} en ${esc(label)}</span></div>
     <div class="cal">${cells}</div>
-    <p class="small muted">Un jour est coché quand tu termines une séance.</p></section>${weeklySets()}${machineList()}</div>`;
+    <p class="small muted">Un jour est coché quand tu termines une séance.</p></section>${weeklySets()}${machineList()}${window.claude?transferCard():importCard()}</div>`;
 }
+// Transfert vers l'appli Android : les données encodées en un code à copier ici et à coller dans l'appli.
+function exportCode(){const body=clone(S);delete body._dirty;const bytes=new TextEncoder().encode(JSON.stringify(body));let bin='';bytes.forEach(b=>bin+=String.fromCharCode(b));return btoa(bin).replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'')}
+function decodeCode(code){
+  try{let b=String(code).trim().replace(/^.*#import=/,'').replace(/\s+/g,'').replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
+    const bin=atob(b),d=JSON.parse(new TextDecoder().decode(Uint8Array.from(bin,c=>c.charCodeAt(0))));return d&&d.v===2?d:null}catch(e){return null}
+}
+function importCode(code){
+  const d=decodeCode(code);
+  if(!d){toast('Ce code ne correspond pas à des données MaSalle. Recopie-le depuis la version Claude.');return}
+  const n=x=>Array.isArray(x)?x.length:Object.keys(x||{}).length;
+  confirmBox('Importer tes données ?',`${n(d.gyms)} salle(s), ${n(d.machines)} machine(s) et ${n(d.plans)} séance(s). Ce qui est déjà dans l'appli sera remplacé.`,'Importer',()=>{
+    S=normalize(d);A=null;Store.saveMain();Store.saveSession();ui.gymId=null;ui.tab='salle';closeAllSheets();render();toast('Données importées');
+  });
+}
+function transferCard(){return`<section class="card stack"><h2 class="h2">Appli Android</h2><p class="small muted">Pour retrouver tes salles, machines et séances dans l'appli installée : copie tes données ici, puis dans l'appli va dans Profil, « Importer mes données », et colle.</p><button class="btn" data-act="copyData">Copier mes données</button><textarea class="inp" id="codeOut" rows="3" readonly hidden aria-label="Code de tes données"></textarea></section>`}
+function importCard(){return`<section class="card stack"><h2 class="h2">Importer</h2><p class="small muted">Pour récupérer ce que tu as fait dans la version Claude : là-bas, va dans Profil, « Copier mes données », puis colle le code ici.</p><button class="btn dark" data-act="openImport">Importer mes données</button><button class="btn ghost" data-act="copyData">Copier mes données (sauvegarde)</button><textarea class="inp" id="codeOut" rows="3" readonly hidden aria-label="Code de tes données"></textarea></section>`}
 // Chaque machine faite en séance = 3 séries : 3 pour le muscle choisi, 1,5 pour ses autres muscles.
 function weeklySets(){
   const now=Date.now(),sets={},last={};
@@ -855,6 +872,9 @@ const ACT={
   jump:d=>{const i=+d.i;A.items[i].done=false;A.cur=i;Store.saveSession();renderSession()},
   finish:()=>finishSession(),
   // profil
+  copyData:()=>{const code=exportCode(),ta=$('#codeOut'),fb=()=>{if(ta){ta.hidden=false;ta.value=code;ta.focus();ta.select()}toast('Copie le code affiché')};try{navigator.clipboard.writeText(code).then(()=>toast('Données copiées'),fb)}catch(e){fb()}},
+  openImport:()=>pushSheet(()=>({title:'Importer mes données',body:`<textarea class="inp" id="codeIn" rows="6" placeholder="Colle ici le code copié depuis la version Claude" aria-label="Code à importer"></textarea>`,foot:`<button class="btn" data-act="doImport">Importer</button>`})),
+  doImport:()=>importCode($('#codeIn').value),
   calMove:d=>{const c=ui.cal,t=new Date(c.y,c.m+(+d.d),1);ui.cal={y:t.getFullYear(),m:t.getMonth()};render()},
 };
 const IN={
@@ -894,26 +914,13 @@ window.claude?.hot?.ready?window.claude.hot.ready(start):start();
 /* ============ appli installée : import des données, installation, hors connexion ============ */
 (function(){
   const h=location.hash;
-  if(h.startsWith('#import=')){
-    let d=null;
-    try{
-      let b=h.slice(8).replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
-      const bin=atob(b),bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
-      d=JSON.parse(new TextDecoder().decode(bytes));
-    }catch(e){d=null}
-    history.replaceState(null,'','./#salle');
-    if(!d||d.v!==2){toast('Le lien de transfert est incomplet. Réessaie depuis la version Claude.');return}
-    const n=x=>Array.isArray(x)?x.length:Object.keys(x||{}).length;
-    confirmBox('Importer tes données ?',`${n(d.gyms)} salle(s), ${n(d.machines)} machine(s) et ${n(d.plans)} séance(s). Ce qui est déjà dans l'appli sera remplacé.`,'Importer',()=>{
-      S=normalize(d);A=null;Store.saveMain();Store.saveSession();ui.gymId=null;ui.tab='salle';render();toast('Données importées');
-    });
-  }
+  if(h.startsWith('#import=')){history.replaceState(null,'','./#salle');importCode(h.slice(8))}
 })();
 let installEvt=null;
 window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;$('#installBtn').hidden=false});
 $('#installBtn').addEventListener('click',async()=>{if(!installEvt)return;installEvt.prompt();await installEvt.userChoice;installEvt=null;$('#installBtn').hidden=true});
 window.addEventListener('appinstalled',()=>{$('#installBtn').hidden=true;toast('MaSalle est installée')});
-if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+if('serviceWorker' in navigator&&location.hostname!=='appassets.androidplatform.net')navigator.serviceWorker.register('sw.js');
 try{navigator.storage?.persist?.()}catch(_){}
 </script>
 </body>
