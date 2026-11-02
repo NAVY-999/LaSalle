@@ -1,0 +1,920 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>MaSalle Muscu</title>
+<meta name="theme-color" content="#FE7000">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,100..900&display=swap">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<style>
+/* Layout: one-screen app — brand bar, view, bottom tabs. The gym is a paper floor plan:
+   black walls, dashed machine blocks; the machine to do turns orange and moves during a workout. */
+:root{
+  --orange:#FE7000;
+  --orange-text:#B84E00;
+  --orange-soft:#FFEBDC;
+  --on-orange:#141414;
+  --bg:#F3F2EF;
+  --surface:#FFFFFF;
+  --surface-2:#E9E7E3;
+  --ink:#1C1C1A;
+  --ink-2:#54514C;
+  --ink-3:#86827B;
+  --line:#DDDAD4;
+  --dark-card:#1C1C1A;
+  --on-dark:#F6F4F0;
+  --on-dark-2:#A8A39B;
+  --danger:#B8322A;
+  --scrim:rgba(10,10,10,.5);
+  --shadow:0 10px 30px rgba(20,16,10,.14);
+  --plan-desk:#E2DFDA;
+  --plan-bg:#FFFFFF;
+  --plan-ink:#161616;
+  --plan-grid:#EFEDE9;
+  --plan-grid-5:#DAD6CF;
+  --plan-blk:#FFFFFF;
+  --plan-cur:#FFF0E3;
+  --plan-done:#E6E3DD;
+  --font-display:"Archivo","Arial Narrow","Helvetica Neue",Arial,sans-serif;
+  --font-body:"Archivo","Helvetica Neue",Arial,sans-serif;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --orange-text:#FF9447;--orange-soft:#3A2312;
+  --bg:#111110;--surface:#1B1B19;--surface-2:#262523;--ink:#F1EFEB;--ink-2:#BAB5AD;--ink-3:#807B74;--line:#302F2C;
+  --dark-card:#050505;--danger:#FF6B5E;--scrim:rgba(0,0,0,.62);--shadow:0 10px 30px rgba(0,0,0,.5);
+  --plan-desk:#1F1E1C;--plan-bg:#ECE9E3;--plan-grid:#E0DCD5;--plan-grid-5:#C9C4BB;--plan-blk:#F5F3EF;--plan-cur:#FFE3CC;--plan-done:#D3CEC6;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --orange-text:#FF9447;--orange-soft:#3A2312;
+  --bg:#111110;--surface:#1B1B19;--surface-2:#262523;--ink:#F1EFEB;--ink-2:#BAB5AD;--ink-3:#807B74;--line:#302F2C;
+  --dark-card:#050505;--danger:#FF6B5E;--scrim:rgba(0,0,0,.62);--shadow:0 10px 30px rgba(0,0,0,.5);
+  --plan-desk:#1F1E1C;--plan-bg:#ECE9E3;--plan-grid:#E0DCD5;--plan-grid-5:#C9C4BB;--plan-blk:#F5F3EF;--plan-cur:#FFE3CC;--plan-done:#D3CEC6;
+  color-scheme:dark}
+
+*,*::before,*::after{box-sizing:border-box}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0}
+[hidden]{display:none!important}
+.hdr{display:flex;align-items:center;justify-content:space-between;gap:10px}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--font-body);font-size:15px;line-height:1.45;-webkit-font-smoothing:antialiased;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button,input{font:inherit;color:inherit}
+button{cursor:pointer;background:none;border:0;padding:0}
+:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+svg.i{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex:none}
+
+.app{height:100%;display:flex;flex-direction:column;max-width:780px;margin:0 auto;background:var(--bg)}
+.gut{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.hdr{flex:none;background:var(--surface);border-bottom:1px solid var(--line);padding-block:10px}
+.brand{font-family:var(--font-display);font-weight:900;font-stretch:72%;font-size:24px;line-height:1;text-transform:uppercase;display:flex;align-items:center;gap:8px}
+.brand b{display:inline-block;width:13px;height:20px;background:var(--orange);transform:skewX(-14deg)}
+.brand span{color:var(--orange-text)}
+.main{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden}
+.main.fill{overflow:hidden;display:flex;flex-direction:column}
+.wrap{padding-block:18px 32px;display:flex;flex-direction:column;gap:20px}
+.tabs{flex:none;display:grid;grid-template-columns:repeat(3,1fr);background:var(--surface);border-top:1px solid var(--line)}
+.tab{display:flex;flex-direction:column;align-items:center;gap:3px;padding:9px 0 8px;font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3);position:relative}
+.tab svg.i{width:23px;height:23px}
+.tab[aria-current="page"]{color:var(--ink)}
+.tab[aria-current="page"] svg.i{color:var(--orange)}
+.tab[aria-current="page"]::before{content:"";position:absolute;top:-1px;left:32%;right:32%;height:3px;background:var(--orange)}
+
+.h1{font-family:var(--font-display);font-weight:900;font-stretch:72%;font-size:32px;line-height:.98;text-transform:uppercase;text-wrap:balance;margin:0}
+.h2{font-family:var(--font-display);font-weight:850;font-stretch:75%;font-size:22px;line-height:1.05;text-transform:uppercase;text-wrap:balance;margin:0}
+.h3{font-family:var(--font-display);font-weight:800;font-stretch:80%;font-size:17px;line-height:1.1;text-transform:uppercase;margin:0}
+.eyebrow{font-size:11.5px;font-weight:700;letter-spacing:.09em;text-transform:uppercase;color:var(--ink-3)}
+.muted{color:var(--ink-2)} .small{font-size:13px}
+p{margin:0}
+.row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.stack{display:flex;flex-direction:column;gap:10px}
+.grow{flex:1;min-width:0}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-family:var(--font-display);font-weight:850;font-stretch:80%;font-size:16px;letter-spacing:.03em;text-transform:uppercase;padding:12px 18px;border-radius:8px;background:var(--orange);color:var(--on-orange);min-height:46px;white-space:nowrap}
+.btn:active{transform:translateY(1px)}
+.btn.dark{background:var(--ink);color:var(--bg)}
+.btn.ghost{background:transparent;color:var(--ink);box-shadow:inset 0 0 0 2px var(--ink)}
+.btn.danger{background:transparent;color:var(--danger);box-shadow:inset 0 0 0 2px var(--danger)}
+.btn.sm{min-height:38px;padding:7px 12px;font-size:14px}
+.btn.wide{width:100%}
+.btn[disabled]{opacity:.4;pointer-events:none}
+.ib{width:40px;height:40px;display:inline-grid;place-items:center;border-radius:10px;color:var(--ink);flex:none}
+.ib:hover{background:var(--surface-2)}
+.link{color:var(--orange-text);font-weight:700;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;border:1.5px solid var(--line);background:var(--surface);border-radius:999px;padding:7px 13px;font-size:13.5px;font-weight:650;white-space:nowrap;color:var(--ink)}
+.chip.on{background:var(--orange);border-color:var(--orange);color:var(--on-orange)}
+.field{display:flex;flex-direction:column;gap:6px}
+.field>span{font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-3)}
+.inp{width:100%;min-height:46px;border:1.5px solid var(--line);border-radius:8px;background:var(--surface);padding:10px 12px;font-size:16px}
+.inp:focus{border-color:var(--orange);outline:none}
+.wt{display:inline-flex;align-items:center;border:1.5px solid var(--line);border-radius:10px;background:var(--surface);flex:none}
+.wt button{width:44px;height:46px;display:grid;place-items:center;color:var(--ink)}
+.wt input{width:64px;border:0;background:transparent;text-align:right;font-family:var(--font-display);font-weight:850;font-stretch:80%;font-size:22px;outline:none;padding:0}
+.wt span{font-weight:700;font-size:13px;color:var(--ink-3);padding:0 4px 0 4px}
+.wt.sm button{width:36px;height:38px}.wt.sm input{width:50px;font-size:18px}
+.card{background:var(--surface);border-radius:12px;padding:16px}
+.list{background:var(--surface);border-radius:12px;overflow:hidden}
+.li{display:flex;align-items:center;gap:12px;padding:14px 16px;border-top:1px solid var(--line);width:100%;text-align:left}
+.li:first-child{border-top:0}
+.li .t{font-weight:700}
+.empty{border:2px dashed var(--line);border-radius:12px;padding:22px 18px;display:flex;flex-direction:column;gap:12px;align-items:flex-start}
+
+/* salle */
+.sv-bar{flex:none;display:flex;flex-direction:column;gap:10px;padding-block:12px 10px}
+.gym-pick{display:flex;align-items:center;gap:8px;min-width:0;text-align:left}
+.gym-pick>.grow{min-width:0}
+.gym-pick .h2{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tools{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none}
+.tools::-webkit-scrollbar{display:none}
+.tool{display:inline-flex;align-items:center;gap:6px;padding:9px 12px;border-radius:8px;background:var(--surface);font-size:13.5px;font-weight:750;white-space:nowrap;color:var(--ink);box-shadow:inset 0 0 0 1.5px var(--line)}
+.tool.on{background:var(--ink);color:var(--bg);box-shadow:none}
+.tool.go{background:var(--orange);color:var(--on-orange);box-shadow:none}
+.maphost{position:relative;flex:1;min-height:220px;background:var(--plan-desk);overflow:hidden}
+.map-fit{position:absolute;right:calc(10px + env(safe-area-inset-right,0px));top:10px;width:40px;height:40px;border-radius:10px;background:var(--surface);color:var(--ink);display:grid;place-items:center;box-shadow:var(--shadow)}
+.map-hint{position:absolute;left:calc(10px + env(safe-area-inset-left,0px));top:10px;right:60px;pointer-events:none}
+.map-hint span{display:inline-block;background:var(--ink);color:var(--bg);font-size:12.5px;font-weight:600;padding:6px 10px;border-radius:7px}
+.insp{flex:none;background:var(--surface);border-top:1px solid var(--line);padding-block:8px;display:flex;align-items:center;gap:8px;min-height:56px}
+.insp .t{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+
+/* plan svg */
+svg.plan{width:100%;height:100%;display:block;touch-action:none;user-select:none;-webkit-user-select:none}
+.pl-floor{fill:var(--plan-bg)}
+.pl-g1{fill:none;stroke:var(--plan-grid);stroke-width:2}
+.pl-g5{fill:none;stroke:var(--plan-grid-5);stroke-width:3}
+.pl-outer{fill:none;stroke:var(--plan-ink);stroke-width:18}
+.pl-wall{stroke:var(--plan-ink);stroke-width:12;stroke-linecap:square}
+.pl-hit{stroke:transparent;stroke-width:70;fill:none}
+.pl-wallg.sel .pl-wall{stroke:var(--orange)}
+.blk-r{fill:var(--plan-blk);stroke:var(--plan-ink);stroke-width:5;stroke-dasharray:16 10}
+.blk text{fill:var(--plan-ink);font-family:var(--font-display);font-weight:800;font-stretch:78%}
+.blk.sel .blk-r{stroke:var(--orange);stroke-width:9;stroke-dasharray:none}
+.blk.cur .blk-in{animation:breathe 1.8s ease-in-out infinite;transform-box:fill-box;transform-origin:center}
+.blk.cur .blk-r{stroke:var(--orange);stroke-width:16;fill:var(--plan-cur);stroke-dasharray:22 12;animation:march 1s linear infinite}
+.blk.done .blk-r{fill:var(--plan-done)}
+.blk.done text{opacity:.5}
+.hdl{fill:var(--orange);stroke:var(--plan-bg);stroke-width:6}
+.hdl-hit{fill:transparent}
+.draft-l{stroke:var(--orange);stroke-width:12;stroke-linecap:round}
+.dim-t{fill:var(--orange-text);font-family:var(--font-body);font-weight:800}
+@keyframes march{to{stroke-dashoffset:-68}}
+@keyframes breathe{0%,100%{transform:scale(1)}50%{transform:scale(1.045)}}
+
+/* feuilles */
+.scrim{position:fixed;inset:0;background:var(--scrim);z-index:50}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:51;max-height:90%;max-width:780px;margin:0 auto;display:flex;flex-direction:column;background:var(--surface);border-radius:18px 18px 0 0;padding-bottom:env(safe-area-inset-bottom,0px);box-shadow:var(--shadow);animation:up .2s ease-out}
+.sheet.full{top:calc(env(safe-area-inset-top,0px) + 12px);max-height:none}
+@keyframes up{from{transform:translateY(40px);opacity:.4}}
+.sh-head{flex:none;display:flex;align-items:flex-start;gap:10px;padding-block:16px 8px}
+.sh-head .grow{display:flex;flex-direction:column;gap:4px}
+.sh-body{flex:1;min-height:0;overflow-y:auto;padding-block:6px 22px;display:flex;flex-direction:column;gap:18px}
+.sh-foot{flex:none;display:flex;gap:10px;padding-block:12px;border-top:1px solid var(--line)}
+.sh-foot .btn{flex:1}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:60;background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:8px;font-weight:650;font-size:14px;box-shadow:var(--shadow);max-width:calc(100% - 32px)}
+.pick{border:1.5px solid var(--line);border-radius:12px;padding:12px;display:flex;align-items:center;gap:10px;width:100%;text-align:left;flex-wrap:wrap}
+.pick.on{border-color:var(--orange);background:var(--orange-soft)}
+.ck{width:26px;height:26px;border-radius:7px;border:2px solid var(--ink-3);display:grid;place-items:center;flex:none;color:var(--on-orange)}
+.pick.on .ck{background:var(--orange);border-color:var(--orange)}
+
+/* séances */
+.plan-c{background:var(--surface);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.plan-c ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.plan-c li{display:flex;gap:8px}
+.plan-c li .m{width:96px;flex:none;color:var(--ink-3);font-weight:700;font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding-top:2px}
+
+/* séance en cours */
+.session{position:fixed;inset:0;z-index:40;background:var(--bg);display:flex;flex-direction:column;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);max-width:780px;margin:0 auto}
+.ss-top{flex:none;display:flex;align-items:center;gap:10px;background:var(--dark-card);color:var(--on-dark);padding-block:10px}
+.ss-top .h3{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ss-map{flex:0 0 46%;min-height:200px;position:relative}
+.ss-card{flex:1;min-height:0;overflow-y:auto;background:var(--surface);border-radius:18px 18px 0 0;margin-top:-14px;position:relative;z-index:1;box-shadow:0 -6px 20px rgba(0,0,0,.08);padding-block:18px 28px;display:flex;flex-direction:column;gap:16px}
+.kg{font-family:var(--font-display);font-weight:900;font-stretch:70%;font-size:56px;line-height:.9;color:var(--orange-text)}
+.kg small{font-size:22px;color:var(--ink-3);margin-left:4px}
+.step{display:flex;align-items:center;gap:10px;padding:9px 0;border-top:1px solid var(--line);width:100%;text-align:left;font-size:14px}
+.step:first-child{border-top:0}
+.step .n{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:800;font-size:12.5px;flex:none;background:var(--surface-2)}
+.step.cur .n{background:var(--orange);color:var(--on-orange)}
+.step.done .n{background:var(--ink);color:var(--bg)}
+.step.done .t{color:var(--ink-3);text-decoration:line-through}
+
+/* profil : calendrier */
+.cal-h{display:flex;align-items:center;gap:8px}
+.cal{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;text-align:center}
+.cal .wd{font-size:11px;font-weight:700;color:var(--ink-3);letter-spacing:.05em}
+.cal .d{aspect-ratio:1;display:grid;place-items:center;border-radius:8px;font-weight:700;font-size:14px;background:var(--surface-2);color:var(--ink-2);font-variant-numeric:tabular-nums}
+.cal .d.on{background:var(--orange);color:var(--on-orange)}
+.cal .d.today{box-shadow:inset 0 0 0 2px var(--ink)}
+.cal .d.out{background:transparent}
+.count{font-family:var(--font-display);font-weight:900;font-stretch:70%;font-size:48px;line-height:.9;color:var(--orange-text)}
+/* profil : séries par muscle, machines */
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.mb{display:grid;grid-template-columns:92px 1fr 66px;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--line);font-size:14px}
+.mb:first-child{border-top:0}
+.mb .nm{font-weight:700}
+.mb .tr{position:relative;height:10px;background:var(--surface-2);border-radius:5px}
+.mb .tr .band{position:absolute;top:-3px;bottom:-3px;left:25%;width:25%;border-left:1.5px dashed var(--ink-3);border-right:1.5px dashed var(--ink-3);opacity:.6}
+.mb .tr i{position:absolute;left:0;top:0;bottom:0;background:var(--orange);border-radius:5px}
+.mb .v{text-align:right;font-variant-numeric:tabular-nums;color:var(--ink-2);font-size:12.5px;line-height:1.15}
+.mb .v b{color:var(--ink);font-size:14.5px}
+@media (min-width:640px){.mbs{display:grid;grid-template-columns:1fr 1fr;column-gap:28px}.mbs .mb:nth-child(2){border-top:0}}
+.li .kgv{font-family:var(--font-display);font-weight:850;font-stretch:80%;font-size:19px;font-variant-numeric:tabular-nums;text-align:right;line-height:1.1}
+.li .kgv small{display:block;font-family:var(--font-body);font-stretch:100%;font-size:12px;font-weight:700;color:var(--ink-3)}
+.kgline{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.evo{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.evo>div{background:var(--surface-2);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:2px}
+.evo .kg{font-size:40px}
+svg.wc{width:100%;height:auto;display:block}
+.wc .ln{fill:none;stroke:var(--orange);stroke-width:2.5;stroke-linejoin:round;stroke-linecap:round}
+.wc .pt{fill:var(--orange);stroke:var(--surface);stroke-width:2}
+.wc .gl{stroke:var(--line);stroke-width:1}
+.wc .ax{fill:var(--ink-3);font-size:11px;font-family:var(--font-body)}
+.up{color:var(--orange-text)}
+@media (prefers-reduced-motion: reduce){.blk.cur .blk-in,.blk.cur .blk-r,.sheet{animation:none}}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header class="hdr gut"><div class="brand" aria-label="MaSalle"><b></b>Ma<span>Salle</span></div><button class="btn sm" id="installBtn" hidden>Installer</button></header>
+  <main class="main" id="main"></main>
+  <nav class="tabs gut" aria-label="Navigation">
+    <button class="tab" data-act="tab" data-tab="salle"><svg class="i" viewBox="0 0 24 24"><path d="M3 4h18v16H3zM3 11h6M9 4v4M14 20v-6h7"/></svg>Salle</button>
+    <button class="tab" data-act="tab" data-tab="seances"><svg class="i" viewBox="0 0 24 24"><path d="M6.5 6.5v11M3.5 9v6M17.5 6.5v11M20.5 9v6M6.5 12h11"/></svg>Séances</button>
+    <button class="tab" data-act="tab" data-tab="profil"><svg class="i" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c1-4.5 4.5-6.5 8-6.5s7 2 8 6.5"/></svg>Profil</button>
+  </nav>
+</div>
+<section class="session" id="session" hidden aria-label="Séance en cours"></section>
+<div class="scrim" id="scrim" data-act="closeSheet" hidden></div>
+<section class="sheet" id="sheet" role="dialog" aria-modal="true" hidden></section>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+'use strict';
+/* ============ utilitaires ============ */
+const U=100; // unités SVG par mètre
+const $=(s,r=document)=>r.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clone=o=>JSON.parse(JSON.stringify(o));
+const clamp=(v,a,b)=>Math.min(b,Math.max(a,v));
+const num=v=>{const n=parseFloat(String(v).replace(',','.'));return isFinite(n)?n:0};
+const fmt=n=>Number(n||0).toLocaleString('fr-FR',{maximumFractionDigits:2}).replace(/\s/g,'');
+const snap=v=>Math.round(v*4)/4;
+const uid=p=>(p||'')+Math.random().toString(36).slice(2,8)+Date.now().toString(36).slice(-3);
+const mkey=n=>String(n||'').trim().toLowerCase().replace(/\s+/g,' ');
+const dayKey=t=>{const d=new Date(t);return`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`};
+
+const MUSCLES=[
+  {id:'pecs',name:'Pectoraux'},{id:'dos',name:'Dos'},{id:'epaules',name:'Épaules'},{id:'biceps',name:'Biceps'},
+  {id:'triceps',name:'Triceps'},{id:'abdos',name:'Abdos'},{id:'lombaires',name:'Lombaires'},{id:'fessiers',name:'Fessiers'},
+  {id:'quadri',name:'Quadriceps'},{id:'ischios',name:'Ischios'},{id:'adducteurs',name:'Adducteurs'},{id:'mollets',name:'Mollets'},
+  {id:'avantbras',name:'Avant-bras'},{id:'cardio',name:'Cardio'}];
+const MUSCLE=Object.fromEntries(MUSCLES.map(m=>[m.id,m.name]));
+
+const IC={
+  plus:'<path d="M12 5v14M5 12h14"/>',minus:'<path d="M5 12h14"/>',x:'<path d="M6 6l12 12M18 6L6 18"/>',
+  check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
+  edit:'<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/>',play:'<path d="M7 4.5v15l12-7.5z"/>',
+  fit:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',chevd:'<path d="M6 9l6 6 6-6"/>',
+  prev:'<path d="M15 6l-6 6 6 6"/>',next:'<path d="M9 6l6 6-6 6"/>',wall:'<path d="M4 20V4M4 4h16"/>',ruler:'<path d="M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2"/>'};
+const ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
+
+/* ============ état ============ */
+function emptyState(){return{v:2,updatedAt:0,gyms:[],plans:[],days:[],machines:{},log:[]}}
+// Une machine = un nom. Les blocs du plan portant le même nom partagent muscles, poids et historique (S.machines).
+function normalize(s){
+  s=s&&typeof s==='object'&&s.v===2?s:{};
+  const o={...emptyState(),...s,gyms:Array.isArray(s.gyms)?s.gyms:[],plans:Array.isArray(s.plans)?s.plans:[],days:Array.isArray(s.days)?s.days:[],
+    machines:s.machines&&typeof s.machines==='object'&&!Array.isArray(s.machines)?s.machines:{},log:Array.isArray(s.log)?s.log:[]};
+  for(const g of o.gyms)for(const b of g.items)if(b.kind==='machine'){
+    const k=mkey(b.name);
+    if(k&&!o.machines[k])o.machines[k]={name:String(b.name).trim(),muscles:Array.isArray(b.muscles)?b.muscles.slice():[],weight:num(b.weight),hist:[{t:o.updatedAt||Date.now(),w:num(b.weight)}]};
+    delete b.muscles;delete b.weight;
+  }
+  return o;
+}
+let S=emptyState(); // salles, machines mémorisées, séances, jours de salle, séances faites
+let A=null;         // séance en cours
+const ui={tab:'salle',gymId:null,edit:false,tool:'select',sel:null,vb:{},sheets:[],draft:null,pb:null,cal:null};
+
+/* ============ stockage : compte Claude + copie sur l'appareil ============ */
+const LS={
+  get(k){try{const v=localStorage.getItem('ms2.'+k);return v?JSON.parse(v):null}catch(e){return null}},
+  set(k,v){try{localStorage.setItem('ms2.'+k,JSON.stringify(v))}catch(e){}},
+};
+const Store={
+  cloud:false,refs:null,timers:{},busy:{},again:{},lastSes:0,clearedAt:0,
+  async init(){
+    let db=null;
+    try{db=await window.claude?.use?.('db')}catch(e){db=null}
+    if(!db)return;
+    try{
+      const main=db.doc('app/main'),ses=db.doc('app/session');
+      this.refs={main,ses};
+      const snap=await main.get(),local=LS.get('main');
+      this.cloud=true;
+      if(snap.exists){
+        const remote=normalize(clone(snap.data()));
+        if(local&&local._dirty&&(local.updatedAt||0)>(remote.updatedAt||0))await this.flush('main');
+        else{S=remote;LS.set('main',S)}
+      }else if(S.gyms.length||S.days.length)await this.flush('main');
+      if(!this.cloud)return;
+      const ss=await ses.get(),sd=ss.exists?ss.data():null,su=sd?.updatedAt||0;
+      if(sd&&su>this.sesT()){A=sd.session?clone(sd.session):null;this.lastSes=su;LS.set('session',A)}
+      else if(A&&A.updatedAt>su)this.flush('ses');
+      render();if(A)openSessionView();
+      main.onSnapshot(s=>{
+        if(!s.exists||this.timers.main||this.busy.main)return;
+        const d=s.data();if((d.updatedAt||0)<=(S.updatedAt||0))return;
+        S=normalize(clone(d));LS.set('main',S);render();
+      },e=>this.fail(e));
+      ses.onSnapshot(s=>{
+        if(this.timers.ses||this.busy.ses)return;
+        const d=s.exists?s.data():null,u=d?.updatedAt||0;
+        if(!d||u===this.lastSes||u<=this.sesT())return;
+        this.lastSes=u;A=d.session?clone(d.session):null;LS.set('session',A);
+        if(A)openSessionView();else closeSessionView();
+      },e=>this.fail(e));
+    }catch(e){this.fail(e)}
+  },
+  fail(e){const c=e&&e.code;if(c==='invalid_argument'||c==='revoked'||c==='not_granted')this.cloud=false},
+  sesT(){return A?.updatedAt||this.clearedAt||0},
+  saveMain(){
+    S.updatedAt=Date.now();S._dirty=true;LS.set('main',S);
+    if(!this.cloud)return;
+    clearTimeout(this.timers.main);
+    this.timers.main=setTimeout(()=>{this.timers.main=null;this.flush('main')},600);
+  },
+  saveSession(){
+    if(A)A.updatedAt=Date.now();else this.clearedAt=Date.now();
+    LS.set('session',A);
+    if(!this.cloud)return;
+    clearTimeout(this.timers.ses);
+    this.timers.ses=setTimeout(()=>{this.timers.ses=null;this.flush('ses')},400);
+  },
+  async flush(which){
+    if(!this.refs)return;
+    if(this.busy[which]){this.again[which]=true;return}
+    this.busy[which]=true;
+    try{
+      if(which==='main'){const body=clone(S);delete body._dirty;await this.refs.main.set(body);S._dirty=false;LS.set('main',S)}
+      else{const t=this.sesT()||Date.now();this.lastSes=t;await this.refs.ses.set({session:A?clone(A):null,updatedAt:t})}
+    }catch(e){this.fail(e);if(this.cloud)setTimeout(()=>this.flush(which),6000)}
+    finally{this.busy[which]=false;if(this.again[which]){this.again[which]=false;this.flush(which)}}
+  },
+};
+
+/* ============ accès ============ */
+const getGym=id=>S.gyms.find(g=>g.id===id);
+const curGym=()=>getGym(ui.gymId)||S.gyms[0]||null;
+const getItem=(g,id)=>g?.items.find(i=>i.id===id);
+const machinesOf=g=>(g?.items||[]).filter(i=>i.kind==='machine');
+const getPlan=id=>S.plans.find(p=>p.id===id);
+const entryOf=b=>{const k=mkey(b?.name);if(!k)return null;return S.machines[k]||(S.machines[k]={name:String(b.name).trim(),muscles:[],weight:0,hist:[]})};
+const uniqMachines=g=>{const seen=new Set();return machinesOf(g).filter(m=>{const k=mkey(m.name);if(seen.has(k))return false;seen.add(k);return true})};
+const ago=t=>{const d=Math.round((new Date(dayKey(Date.now())).getTime()-new Date(dayKey(t)).getTime())/864e5);return d<=0?"aujourd'hui":d===1?'hier':`il y a ${d} j`};
+const fmtDate=t=>new Date(t).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
+
+/* ============ plan de salle : rendu ============ */
+function blockText(m){
+  const w=m.w*U,h=m.h*U,tall=h>w*1.25;
+  const label=(m.name||'').toUpperCase();
+  const along=(tall?h:w)-18,cross=tall?w:h;
+  let lines=[label],fs=Math.min(30,cross*0.34,along/(Math.max(label.length,3)*0.56));
+  if(fs<17&&label.includes(' ')){
+    const words=label.split(' ');let best=null;
+    for(let i=1;i<words.length;i++){const a=words.slice(0,i).join(' '),b=words.slice(i).join(' '),L=Math.max(a.length,b.length);if(!best||L<best.L)best={a,b,L}}
+    const f2=Math.min(28,cross*0.24,along/(best.L*0.56));
+    if(f2>fs){lines=[best.a,best.b];fs=f2}
+  }
+  fs=Math.max(fs,9);
+  const lh=fs*1.02,y0=-(lines.length-1)*lh/2;
+  return`<g transform="translate(${w/2},${h/2}) rotate(${tall?-90:0})">${lines.map((l,i)=>`<text text-anchor="middle" dominant-baseline="central" y="${y0+i*lh}" font-size="${fs.toFixed(1)}">${esc(l)}</text>`).join('')}</g>`;
+}
+function mapContent(M){
+  const gym=getGym(M.gymId);if(!gym)return'';
+  const W_=gym.w*U,H_=gym.h*U,sel=M.mode==='edit'?ui.sel:null;
+  let s=`<rect class="pl-floor" width="${W_}" height="${H_}"/><rect width="${W_}" height="${H_}" fill="url(#g1${M.uid})"/><rect width="${W_}" height="${H_}" fill="url(#g5${M.uid})"/><rect class="pl-outer" width="${W_}" height="${H_}"/>`;
+  for(const w of gym.items.filter(i=>i.kind==='wall')){
+    s+=`<g class="pl-wallg${sel===w.id?' sel':''}" data-id="${w.id}"><line class="pl-wall" x1="${w.x1*U}" y1="${w.y1*U}" x2="${w.x2*U}" y2="${w.y2*U}"/>`+
+      (M.mode==='edit'?`<line class="pl-hit" x1="${w.x1*U}" y1="${w.y1*U}" x2="${w.x2*U}" y2="${w.y2*U}"/>`:'')+
+      (sel===w.id?handle(w.x1,w.y1,'p1')+handle(w.x2,w.y2,'p2'):'')+`</g>`;
+  }
+  const cur=M.mode==='session'&&A?A.items[A.cur]:null;
+  const keyOf=id=>mkey(getItem(gym,id)?.name),curKey=cur&&!cur.done?keyOf(cur.machineId):null;
+  for(const m of machinesOf(gym)){
+    let cls='blk';
+    if(M.mode==='session'&&A){
+      const k=mkey(m.name),its=A.items.filter(x=>keyOf(x.machineId)===k);
+      if(curKey===k)cls+=' cur';
+      else if(its.length&&its.every(x=>x.done))cls+=' done';
+    }
+    if(sel===m.id)cls+=' sel';
+    s+=`<g class="${cls}" data-id="${m.id}" transform="translate(${m.x*U},${m.y*U})"><g class="blk-in"><rect class="blk-r" width="${m.w*U}" height="${m.h*U}" rx="8"/>${blockText(m)}</g>`+
+      (sel===m.id?handle(m.w,m.h,'rs'):'')+`</g>`;
+  }
+  if(ui.draft&&M.mode==='edit'){
+    const d=ui.draft,L=Math.hypot(d.b.x-d.a.x,d.b.y-d.a.y);
+    s+=`<line class="draft-l" x1="${d.a.x*U}" y1="${d.a.y*U}" x2="${d.b.x*U}" y2="${d.b.y*U}"/><text class="dim-t" x="${d.b.x*U+16}" y="${d.b.y*U-16}" font-size="30">${fmt(L)} m</text>`;
+  }
+  return s;
+}
+function handle(x,y,h){return`<circle class="hdl-hit" data-h="${h}" cx="${x*U}" cy="${y*U}" r="46"/><circle class="hdl" data-h="${h}" cx="${x*U}" cy="${y*U}" r="17"/>`}
+
+/* ============ plan de salle : déplacement, zoom, tracé ============ */
+const maps={};let mapSeq=0;
+function mountMap(host,gymId,mode,key){
+  const gym=getGym(gymId);if(!gym){host.innerHTML='';return null}
+  const M={host,gymId,mode,key,uid:++mapSeq};
+  host.innerHTML=`<svg class="plan" role="img" aria-label="Plan de ${esc(gym.name)}" preserveAspectRatio="xMidYMid meet">
+    <defs><pattern id="g1${M.uid}" width="100" height="100" patternUnits="userSpaceOnUse"><path class="pl-g1" d="M100 0H0V100"/></pattern>
+    <pattern id="g5${M.uid}" width="500" height="500" patternUnits="userSpaceOnUse"><path class="pl-g5" d="M500 0H0V500"/></pattern></defs>
+    <g class="mc"></g></svg>
+    <button class="map-fit" data-act="fitMap" data-k="${key}" aria-label="Voir toute la salle">${ic('fit')}</button>
+    ${mode==='edit'&&ui.tool==='wall'?`<div class="map-hint"><span>Glisse ton doigt pour tracer un mur</span></div>`:''}`;
+  M.svg=host.querySelector('svg');M.g=M.svg.querySelector('.mc');
+  const vk=`${key}:${gymId}:${gym.w}x${gym.h}`;
+  if(!ui.vb[vk])ui.vb[vk]=fitVB(gym);
+  M.vb=ui.vb[vk];applyVB(M);
+  maps[key]=M;drawMap(M);wireMap(M);
+  return M;
+}
+function fitVB(gym){const p=60;return{x:-p,y:-p,w:gym.w*U+p*2,h:gym.h*U+p*2}}
+function applyVB(M){M.svg.setAttribute('viewBox',`${M.vb.x} ${M.vb.y} ${M.vb.w} ${M.vb.h}`)}
+function drawMap(M){M.g.innerHTML=mapContent(M)}
+const _q=new Set();
+function queueDraw(M){if(!_q.size)requestAnimationFrame(()=>{_q.forEach(drawMap);_q.clear()});_q.add(M)}
+function toSvg(M,cx,cy,inv){const p=M.svg.createSVGPoint();p.x=cx;p.y=cy;return p.matrixTransform(inv||M.svg.getScreenCTM().inverse())}
+function toRoom(M,cx,cy){const p=toSvg(M,cx,cy);return{x:p.x/U,y:p.y/U}}
+function zoomTo(M,nw,anchor,cx,cy){
+  const gym=getGym(M.gymId);nw=clamp(nw,250,Math.max(gym.w,gym.h)*U*2.2);
+  M.vb.h*=nw/M.vb.w;M.vb.w=nw;applyVB(M);
+  const now=toSvg(M,cx,cy);M.vb.x+=anchor.x-now.x;M.vb.y+=anchor.y-now.y;applyVB(M);
+}
+function wireMap(M){
+  const svg=M.svg,P=new Map();let G=null;
+  svg.addEventListener('pointerdown',e=>{
+    if(e.button>0)return;
+    try{svg.setPointerCapture(e.pointerId)}catch(_){}
+    P.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(P.size===2){
+      if(G&&G.moved&&G.type!=='pan'&&G.type!=='draw')commitEdit();
+      if(G&&G.type==='draw'){ui.draft=null;queueDraw(M)}
+      const[a,b]=[...P.values()],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
+      G={type:'pinch',d0:Math.hypot(a.x-b.x,a.y-b.y)||1,w0:M.vb.w,anchor:toSvg(M,mid.x,mid.y)};return;
+    }
+    if(P.size>2)return;
+    const tgt=e.target.closest('[data-h],[data-id]'),inv=svg.getScreenCTM().inverse();
+    G={type:'pan',id:e.pointerId,sx:e.clientX,sy:e.clientY,inv,vb0:{...M.vb},s0:toSvg(M,e.clientX,e.clientY,inv),tgt,moved:false};
+    if(M.mode!=='edit')return;
+    const gym=getGym(M.gymId),r0=toRoom(M,e.clientX,e.clientY);G.r0=r0;
+    if(ui.tool==='wall'){G.type='draw';const p={x:clamp(snap(r0.x),0,gym.w),y:clamp(snap(r0.y),0,gym.h)};ui.draft={a:p,b:{...p}};return}
+    const h=tgt?.dataset?.h,id=tgt?.closest('[data-id]')?.dataset.id,it=id?getItem(gym,id):null;
+    if(h&&it){G.type='handle';G.h=h;G.itemId=id;G.orig=clone(it);return}
+    if(it&&(it.kind==='machine'||ui.sel===id)){G.type='move';G.itemId=id;G.orig=clone(it)}
+  });
+  svg.addEventListener('pointermove',e=>{
+    if(!P.has(e.pointerId))return;
+    P.set(e.pointerId,{x:e.clientX,y:e.clientY});
+    if(!G)return;
+    if(G.type==='pinch'){if(P.size<2)return;const[a,b]=[...P.values()];zoomTo(M,G.w0*G.d0/(Math.hypot(a.x-b.x,a.y-b.y)||1),G.anchor,(a.x+b.x)/2,(a.y+b.y)/2);return}
+    if(e.pointerId!==G.id)return;
+    if(!G.moved&&Math.hypot(e.clientX-G.sx,e.clientY-G.sy)<6)return;
+    if(!G.moved&&(G.type==='move'||G.type==='handle'))ui.sel=G.itemId;
+    G.moved=true;
+    if(G.type==='pan'){const p=toSvg(M,e.clientX,e.clientY,G.inv);M.vb.x=G.vb0.x-(p.x-G.s0.x);M.vb.y=G.vb0.y-(p.y-G.s0.y);applyVB(M);return}
+    const gym=getGym(M.gymId),r=toRoom(M,e.clientX,e.clientY);
+    if(G.type==='draw'){
+      const a=ui.draft.a;let b={x:snap(r.x),y:snap(r.y)};
+      const dx=Math.abs(b.x-a.x),dy=Math.abs(b.y-a.y);if(dy<dx*0.18)b.y=a.y;else if(dx<dy*0.18)b.x=a.x;
+      ui.draft.b={x:clamp(b.x,0,gym.w),y:clamp(b.y,0,gym.h)};queueDraw(M);return;
+    }
+    const it=getItem(gym,G.itemId);if(!it)return;
+    const dx=r.x-G.r0.x,dy=r.y-G.r0.y,o=G.orig;
+    if(G.type==='move'){
+      if(it.kind==='wall'){const sx=snap(o.x1+dx)-o.x1,sy=snap(o.y1+dy)-o.y1;it.x1=o.x1+sx;it.y1=o.y1+sy;it.x2=o.x2+sx;it.y2=o.y2+sy}
+      else{it.x=clamp(snap(o.x+dx),0,Math.max(0,gym.w-it.w));it.y=clamp(snap(o.y+dy),0,Math.max(0,gym.h-it.h))}
+    }else if(G.h==='rs'){it.w=clamp(snap(o.w+dx),0.5,gym.w-it.x);it.h=clamp(snap(o.h+dy),0.5,gym.h-it.y)}
+    else if(G.h==='p1'){it.x1=snap(o.x1+dx);it.y1=snap(o.y1+dy)}
+    else{it.x2=snap(o.x2+dx);it.y2=snap(o.y2+dy)}
+    queueDraw(M);
+  });
+  const end=e=>{
+    if(!P.has(e.pointerId))return;P.delete(e.pointerId);
+    if(!G)return;
+    if(G.type==='pinch'){
+      if(P.size===1){const[[id,p]]=[...P],inv=svg.getScreenCTM().inverse();G={type:'pan',id,sx:p.x,sy:p.y,inv,vb0:{...M.vb},s0:toSvg(M,p.x,p.y,inv),moved:true}}
+      else if(!P.size)G=null;return;
+    }
+    if(e.pointerId!==G.id)return;
+    const g=G;G=null;
+    if(g.type==='draw'){const d=ui.draft;ui.draft=null;if(e.type!=='pointercancel'&&d)finishWall(M,d);else queueDraw(M);return}
+    if(!g.moved){if(e.type!=='pointercancel')mapTap(M,g.tgt);return}
+    if(g.type==='move'||g.type==='handle')commitEdit();
+  };
+  svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
+  svg.addEventListener('wheel',e=>{e.preventDefault();zoomTo(M,M.vb.w*Math.exp(e.deltaY*0.0016),toSvg(M,e.clientX,e.clientY),e.clientX,e.clientY)},{passive:false});
+}
+function commitEdit(){
+  const gym=curGym();
+  for(const it of gym.items)if(it.kind==='wall'){it.x1=clamp(it.x1,0,gym.w);it.x2=clamp(it.x2,0,gym.w);it.y1=clamp(it.y1,0,gym.h);it.y2=clamp(it.y2,0,gym.h)}
+  Store.saveMain();render();
+}
+function finishWall(M,d){
+  if(Math.hypot(d.b.x-d.a.x,d.b.y-d.a.y)<0.3){drawMap(M);return}
+  const w={id:uid('w'),kind:'wall',x1:d.a.x,y1:d.a.y,x2:d.b.x,y2:d.b.y};
+  curGym().items.push(w);Store.saveMain();render();
+}
+function mapTap(M,tgt){
+  const id=tgt?.closest?.('[data-id]')?.dataset.id,gym=getGym(M.gymId),it=id?getItem(gym,id):null;
+  if(M.mode==='edit'){
+    if(it&&it.kind==='machine'&&ui.sel===id){openMachine(gym.id,id);return}
+    ui.sel=it?id:null;drawMap(M);renderInspector();return;
+  }
+  if(it&&it.kind==='machine')openMachine(gym.id,id);
+}
+
+/* ============ rendu ============ */
+const TABS=['salle','seances','profil'];
+function render(){
+  for(const b of document.querySelectorAll('.tab')){if(b.dataset.tab===ui.tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')}
+  const main=$('#main'),same=main.dataset.tab===ui.tab,st=main.scrollTop;
+  main.dataset.tab=ui.tab;
+  main.classList.toggle('fill',ui.tab==='salle'&&!!curGym());
+  if(ui.tab==='salle')renderSalle(main);
+  else main.innerHTML=ui.tab==='seances'?viewSeances():viewProfil();
+  if(same)main.scrollTop=st;
+  if(A&&!$('#session').hidden)renderSession();
+  if(ui.sheets.length)showSheet(true);
+}
+
+/* ---------- Salle ---------- */
+function renderSalle(main){
+  const gym=curGym();
+  if(!gym){
+    main.innerHTML=`<div class="wrap gut"><div class="empty"><span class="h1">Crée ta salle</span><p class="muted">Donne-lui un nom et ses dimensions, puis place un bloc pour chaque machine, comme dans ton club.</p><button class="btn" data-act="newGym">${ic('plus')} Nouvelle salle</button></div></div>`;
+    return;
+  }
+  ui.gymId=gym.id;
+  let h=`<div class="sv-bar gut"><div class="row" style="flex-wrap:nowrap"><button class="gym-pick grow" data-act="openGyms"><span class="grow"><span class="eyebrow">${S.gyms.length>1?`Salle · ${S.gyms.length} enregistrées`:'Salle'}</span><span class="h2">${esc(gym.name)}</span></span>${ic('chevd')}</button>`;
+  h+=ui.edit?`<button class="btn sm" data-act="editDone">${ic('check')} Terminé</button>`:`<button class="btn sm dark" data-act="editStart">${ic('edit')} Modifier</button>`;
+  h+=`</div>`;
+  if(ui.edit)h+=`<div class="tools"><button class="tool go" data-act="addMachine">${ic('plus')}Machine</button><button class="tool${ui.tool==='wall'?' on':''}" data-act="toolWall">${ic('wall')}Mur</button><button class="tool" data-act="gymSettings">${ic('ruler')}Nom et taille</button></div>`;
+  h+=`</div><div class="maphost" id="mapHost"></div>${ui.edit?'<div class="insp gut" id="insp"></div>':''}`;
+  main.innerHTML=h;
+  mountMap($('#mapHost'),gym.id,ui.edit?'edit':'view','salle');
+  renderInspector();
+}
+function renderInspector(){
+  const el=$('#insp');if(!el)return;
+  const gym=curGym(),it=ui.sel?getItem(gym,ui.sel):null;
+  if(!it){el.innerHTML=`<span class="grow small muted">${ui.tool==='wall'?'Trace les murs intérieurs en glissant le doigt.':machinesOf(gym).length?'Glisse un bloc pour le déplacer, touche-le pour le sélectionner.':'Ajoute ta première machine avec « + Machine ».'}</span>`;return}
+  el.innerHTML=`<div class="grow"><div class="t">${it.kind==='machine'?esc(it.name):'Mur'}</div><div class="small muted">${it.kind==='machine'?'Glisse le rond orange pour changer la taille':'Glisse les ronds orange pour l\'ajuster'}</div></div>`+
+    (it.kind==='machine'?`<button class="ib" data-act="itEdit" aria-label="Modifier">${ic('edit')}</button>`:'')+
+    `<button class="ib" data-act="itDel" aria-label="Supprimer" style="color:var(--danger)">${ic('trash')}</button>`;
+}
+
+/* ---------- Séances ---------- */
+function viewSeances(){
+  let h=`<div class="wrap gut"><div class="row"><h1 class="h1 grow">Séances</h1><button class="btn sm" data-act="newPlan">${ic('plus')} Nouvelle</button></div>`;
+  if(!S.plans.length)h+=`<div class="empty"><p class="muted">Choisis une salle, puis pour chaque muscle l'exercice et le poids. Quand tu lances la séance, la carte t'indique la machine à faire.</p>${S.gyms.length?`<button class="btn" data-act="newPlan">${ic('plus')} Créer une séance</button>`:`<button class="btn" data-act="tab" data-tab="salle">Créer d'abord une salle</button>`}</div>`;
+  for(const p of S.plans){
+    const gym=getGym(p.gymId);
+    h+=`<article class="plan-c"><div><span class="eyebrow">${esc(gym?gym.name:'Salle supprimée')}</span><h2 class="h2" style="margin-top:4px">${esc(p.name)}</h2></div>
+      <ul>${p.items.map(it=>{const m=getItem(gym,it.machineId);return`<li><span class="m">${esc(MUSCLE[it.muscle]||'')}</span><span>${m?`<b>${esc(m.name)}</b> · ${fmt(entryOf(m).weight)} kg`:'<i>Machine supprimée</i>'}</span></li>`}).join('')}</ul>
+      <div class="row"><button class="btn grow" data-act="startPlan" data-id="${p.id}"${gym&&p.items.some(it=>getItem(gym,it.machineId))?'':' disabled'}>${ic('play')} Lancer</button><button class="ib" data-act="editPlan" data-id="${p.id}" aria-label="Modifier">${ic('edit')}</button><button class="ib" data-act="delPlan" data-id="${p.id}" aria-label="Supprimer" style="color:var(--danger)">${ic('trash')}</button></div></article>`;
+  }
+  return h+`</div>`;
+}
+
+/* ---------- Profil : jours de salle ---------- */
+function viewProfil(){
+  const now=new Date(),c=ui.cal||(ui.cal={y:now.getFullYear(),m:now.getMonth()});
+  const first=new Date(c.y,c.m,1),n=new Date(c.y,c.m+1,0).getDate(),lead=(first.getDay()+6)%7;
+  const days=new Set(S.days),today=dayKey(Date.now());
+  let cnt=0,cells=['L','M','M','J','V','S','D'].map(d=>`<span class="wd">${d}</span>`).join('');
+  for(let i=0;i<lead;i++)cells+=`<span class="d out"></span>`;
+  for(let d=1;d<=n;d++){const k=dayKey(new Date(c.y,c.m,d));if(days.has(k))cnt++;cells+=`<span class="d${days.has(k)?' on':''}${k===today?' today':''}">${d}</span>`}
+  const label=first.toLocaleDateString('fr-FR',{month:'long',year:'numeric'});
+  return`<div class="wrap gut"><h1 class="h1">Profil</h1>
+    <section class="card stack"><div class="cal-h"><span class="h2 grow">Mes jours de salle</span><button class="ib" data-act="calMove" data-d="-1" aria-label="Mois précédent">${ic('prev')}</button><button class="ib" data-act="calMove" data-d="1" aria-label="Mois suivant">${ic('next')}</button></div>
+    <div class="row" style="align-items:baseline"><span class="count">${cnt}</span><span class="muted">${cnt>1?'jours':'jour'} en ${esc(label)}</span></div>
+    <div class="cal">${cells}</div>
+    <p class="small muted">Un jour est coché quand tu termines une séance.</p></section>${weeklySets()}${machineList()}</div>`;
+}
+// Chaque machine faite en séance = 3 séries : 3 pour le muscle choisi, 1,5 pour ses autres muscles.
+function weeklySets(){
+  const now=Date.now(),sets={},last={};
+  for(const l of S.log)for(const it of l.items){
+    for(const m of it.muscles||[])last[m]=Math.max(last[m]||0,l.t);
+    if(l.t<now-7*864e5)continue;
+    for(const m of new Set([it.muscle,...(it.muscles||[])]))sets[m]=(sets[m]||0)+(m===it.muscle?3:1.5);
+  }
+  const rows=MUSCLES.filter(m=>m.id!=='cardio').sort((a,b)=>(sets[b.id]||0)-(sets[a.id]||0));
+  return`<section class="stack"><div class="sec-h"><h2 class="h2">Séries par muscle · 7 j</h2><span class="small muted">zone conseillée 10–20</span></div>
+    <div class="card mbs">${rows.map(m=>{const v=sets[m.id]||0;return`<div class="mb"><span class="nm">${m.name}</span><span class="tr"><span class="band"></span><i style="width:${Math.min(100,v/40*100)}%"></i></span><span class="v"><b>${fmt(v)}</b><br>${last[m.id]?ago(last[m.id]):'jamais'}</span></div>`}).join('')}</div>
+    <p class="small muted">Chaque machine faite = 3 séries pour le muscle choisi dans la séance, ½ pour ses autres muscles. La barre pleine = 40 séries.</p></section>`;
+}
+function machineList(){
+  const list=Object.entries(S.machines).sort((a,b)=>a[1].name.localeCompare(b[1].name));
+  if(!list.length)return'';
+  return`<section class="stack"><h2 class="h2">Mes machines</h2><div class="list">${list.map(([k,e])=>{const s0=e.hist?.[0]?.w??e.weight,d=e.weight-s0;
+    return`<button class="li" data-act="mEvo" data-k="${esc(k)}"><span class="grow"><span class="t">${esc(e.name)}</span><br><span class="small muted">départ ${fmt(s0)} kg</span></span><span class="kgv">${fmt(e.weight)} kg<small class="${d>0?'up':''}">${d?`${d>0?'+':''}${fmt(d)} kg`:'='}</small></span>${ic('next')}</button>`}).join('')}</div></section>`;
+}
+
+/* ============ feuilles ============ */
+function pushSheet(fn,opts={}){ui.sheets.push({fn,...opts});showSheet()}
+function popSheet(){ui.sheets.pop();if(ui.sheets.length)showSheet();else{closeAllSheets();render()}}
+function closeAllSheets(){ui.sheets=[];$('#sheet').hidden=true;$('#scrim').hidden=true;$('#sheet').innerHTML=''}
+function showSheet(keep){
+  const top=ui.sheets[ui.sheets.length-1],el=$('#sheet'),r=top.fn();
+  if(!r){popSheet();return}
+  const body=el.querySelector('.sh-body'),st=keep||top===el._top?body?.scrollTop||0:0;
+  const ae=document.activeElement,aeId=ae&&el.contains(ae)?ae.id:null;
+  el.className='sheet'+(top.full?' full':'');
+  el.innerHTML=`<div class="sh-head gut"><div class="grow">${r.eyebrow?`<span class="eyebrow">${r.eyebrow}</span>`:''}<h2 class="h2" id="shTitle">${r.title}</h2></div><button class="ib" data-act="closeSheet" aria-label="Fermer">${ic('x')}</button></div>
+    <div class="sh-body gut">${r.body}</div>${r.foot?`<div class="sh-foot gut">${r.foot}</div>`:''}`;
+  el.setAttribute('aria-labelledby','shTitle');
+  el._top=top;el.hidden=false;$('#scrim').hidden=false;
+  el.querySelector('.sh-body').scrollTop=st;
+  if(aeId){const n=document.getElementById(aeId);if(n){n.focus();try{const v=n.value.length;n.setSelectionRange(v,v)}catch(_){}}}
+}
+function refreshSheet(){if(ui.sheets.length)showSheet(true)}
+const top_=()=>ui.sheets[ui.sheets.length-1];
+function confirmBox(title,text,okLabel,onOk){
+  pushSheet(()=>({title:esc(title),body:`<p class="muted">${text}</p>`,foot:`<button class="btn ghost" data-act="closeSheet">Annuler</button><button class="btn dark" data-act="confirmOk">${esc(okLabel)}</button>`}),{onOk});
+}
+function weightCtl(id,val,sm,attrs=''){return`<div class="wt${sm?' sm':''}"><button data-act="wStep" data-d="-1" data-for="${id}" aria-label="Moins 2,5 kg">${ic('minus')}</button><input id="${id}" data-in="weight" ${attrs} inputmode="decimal" value="${fmt(val)}" aria-label="Poids en kg"><span>kg</span><button data-act="wStep" data-d="1" data-for="${id}" aria-label="Plus 2,5 kg">${ic('plus')}</button></div>`}
+
+/* ---------- machine ---------- */
+// Hors « Modifier », la fiche est en lecture seule. En modification, tout changement de poids s'ajoute à l'historique.
+function openMachine(gymId,mid){
+  if(!mid){pushSheet(()=>sheetNewMachine(),{gymId,draft:{name:'',muscles:[],weight:0}});return}
+  pushSheet(()=>sheetMachine(),{gymId,mid,editable:ui.edit&&$('#session').hidden});
+}
+function sheetEntry(t){if(t.mid){const b=getItem(getGym(t.gymId),t.mid);return b?entryOf(b):null}return S.machines[mkey(t.draft.name)]||t.draft}
+const musChips=(e,edit)=>edit?`<div class="chips">${MUSCLES.map(x=>`<button class="chip${e.muscles.includes(x.id)?' on':''}" data-act="mMus" data-x="${x.id}">${x.name}</button>`).join('')}</div>`
+  :e.muscles.length?`<div class="chips">${e.muscles.map(x=>`<span class="chip on">${MUSCLE[x]||x}</span>`).join('')}</div>`:`<p class="small muted">Aucun muscle noté.</p>`;
+function sheetMachine(){
+  const t=top_(),gym=getGym(t.gymId),b=getItem(gym,t.mid);if(!b)return null;
+  const e=entryOf(b);
+  if(!t.editable)return{eyebrow:esc(gym.name),title:esc(b.name),body:`<div class="stack"><span class="eyebrow">Ce qu'elle travaille</span>${musChips(e,false)}</div>
+    <div class="stack"><span class="eyebrow">Poids actuel · 3 × 12</span><span class="kg">${fmt(e.weight)}<small>kg</small></span></div>
+    <p class="small muted">Pour changer le poids, appuie sur « Modifier » dans l'onglet Salle.</p>`};
+  return{eyebrow:esc(gym.name),title:esc(b.name),body:`<label class="field"><span>Nom</span><input class="inp" id="mName" data-ch="mRename" value="${esc(b.name)}"></label>
+    <div class="stack"><span class="eyebrow">Ce qu'elle travaille</span>${musChips(e,true)}</div>
+    <div class="row"><span class="eyebrow grow">Poids actuel · 3 × 12</span>${weightCtl('mW',e.weight)}</div>`,
+    foot:`<button class="btn danger" data-act="mDel">${ic('trash')} Retirer du plan</button><button class="btn" data-act="closeSheet">OK</button>`};
+}
+function sheetNewMachine(){
+  const t=top_();
+  return{eyebrow:esc(getGym(t.gymId).name),title:'Nouvelle machine',body:`<label class="field"><span>Nom</span><input class="inp" id="mName" data-in="mNewName" value="${esc(t.draft.name)}" placeholder="Ex. Chest press" autocomplete="off"></label>
+    <div id="mSug">${newSug(t)}</div><div id="mDet" class="stack">${newDet(t)}</div>`,
+    foot:`<button class="btn" data-act="mAdd">${ic('plus')} Ajouter au plan</button>`};
+}
+function newSug(t){
+  const q=mkey(t.draft.name),list=Object.entries(S.machines).filter(([k,e])=>k!==q&&(!q||k.includes(q))).sort((a,b)=>a[1].name.localeCompare(b[1].name)).slice(0,10);
+  return list.length?`<div class="stack"><span class="eyebrow">Machines déjà créées</span><div class="chips">${list.map(([k,e])=>`<button class="chip" data-act="mPick" data-k="${esc(k)}">${esc(e.name)}</button>`).join('')}</div></div>`:'';
+}
+function newDet(t){
+  const e=sheetEntry(t),known=e!==t.draft;
+  return`${known?`<p class="small muted">Machine déjà créée : ses muscles et son poids sont repris.</p>`:''}<div class="stack"><span class="eyebrow">Ce qu'elle travaille</span>${musChips(e,true)}</div>
+    <div class="row"><span class="eyebrow grow">Poids actuel · 3 × 12</span>${weightCtl('mW',e.weight)}</div>`;
+}
+function trackWeight(t,e){
+  if(e===t.draft||!e.hist)return;
+  const h=e.hist,pt={t:Date.now(),w:e.weight};
+  if(t.histOn&&h.length)h[h.length-1]=pt;else{h.push(pt);t.histOn=true}
+  if(h.length>=2&&h[h.length-1].w===h[h.length-2].w){h.pop();t.histOn=false}
+}
+function renameMachine(t,name){
+  name=name.trim();const g=getGym(t.gymId),b=getItem(g,t.mid);if(!b||!name)return;
+  const ok=mkey(b.name),nk=mkey(name),old=entryOf(b);
+  if(nk===ok){old.name=name;S.gyms.forEach(x=>x.items.forEach(i=>{if(i.kind==='machine'&&mkey(i.name)===ok)i.name=name}))}
+  else{
+    if(!S.machines[nk])S.machines[nk]={name,muscles:old.muscles.slice(),weight:old.weight,hist:clone(old.hist||[])};
+    b.name=S.machines[nk].name;
+    if(!S.gyms.some(x=>x.items.some(i=>i.kind==='machine'&&mkey(i.name)===ok)))delete S.machines[ok];
+  }
+  t.histOn=false;Store.saveMain();refreshSheet();
+}
+function weightChart(h){
+  if(h.length<2)return'';
+  const W=340,H=150,pl=34,pr=14,pt=12,pb=22,t0=h[0].t,t1=Math.max(h[h.length-1].t,t0+1);
+  let y0=Math.min(...h.map(p=>p.w)),y1=Math.max(...h.map(p=>p.w));if(y1===y0){y0=Math.max(0,y0-5);y1+=5}
+  const X=t=>pl+(t-t0)/(t1-t0)*(W-pl-pr),Y=v=>pt+(1-(v-y0)/(y1-y0))*(H-pt-pb),pts=h.map(p=>`${X(p.t).toFixed(1)},${Y(p.w).toFixed(1)}`).join(' ');
+  return`<svg class="wc" viewBox="0 0 ${W} ${H}" role="img" aria-label="Évolution du poids">${[y0,y1].map(v=>`<line class="gl" x1="${pl}" x2="${W-pr}" y1="${Y(v)}" y2="${Y(v)}"/><text class="ax" x="${pl-6}" y="${Y(v)+4}" text-anchor="end">${fmt(v)}</text>`).join('')}
+    <text class="ax" x="${pl}" y="${H-5}">${fmtDate(t0)}</text><text class="ax" x="${W-pr}" y="${H-5}" text-anchor="end">${fmtDate(t1)}</text>
+    <polyline class="ln" points="${pts}"/>${h.map(p=>`<circle class="pt" cx="${X(p.t)}" cy="${Y(p.w)}" r="4.5"/>`).join('')}</svg>`;
+}
+function openMachineEvo(k){pushSheet(()=>{
+  const e=S.machines[k];if(!e)return null;
+  const h=e.hist?.length?e.hist:[{t:Date.now(),w:e.weight}],first=h[0],d=e.weight-first.w;
+  return{eyebrow:e.muscles.map(x=>MUSCLE[x]).join(' · ')||'Machine',title:esc(e.name),body:`<div class="evo"><div><span class="eyebrow">Départ</span><span class="kg">${fmt(first.w)}<small>kg</small></span><span class="small muted">${fmtDate(first.t)}</span></div>
+    <div><span class="eyebrow">Actuel</span><span class="kg">${fmt(e.weight)}<small>kg</small></span><span class="small ${d>0?'up':'muted'}">${d?`${d>0?'+':''}${fmt(d)} kg`:'pas encore de changement'}</span></div></div>
+    ${weightChart(h)}
+    <div class="list">${h.slice().reverse().map(p=>`<div class="li"><span class="grow">${new Date(p.t).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</span><b>${fmt(p.w)} kg</b></div>`).join('')}</div>`};
+})}
+
+/* ---------- salles ---------- */
+function openGyms(){pushSheet(()=>({title:'Mes salles',body:`<div class="list">${S.gyms.map(g=>`<button class="li" data-act="pickGym" data-id="${g.id}"><span class="grow"><span class="t">${esc(g.name)}</span><br><span class="small muted">${fmt(g.w)} × ${fmt(g.h)} m · ${machinesOf(g).length} machine${machinesOf(g).length>1?'s':''}</span></span>${g.id===curGym()?.id?ic('check'):''}</button>`).join('')}</div>`,
+  foot:`<button class="btn" data-act="newGym">${ic('plus')} Nouvelle salle</button>`}))}
+function openNewGym(){
+  pushSheet(()=>({title:'Nouvelle salle',body:`<label class="field"><span>Nom</span><input class="inp" id="ngName" placeholder="Ex. Basic-Fit Lille Centre"></label>
+    <div class="row"><label class="field grow"><span>Largeur (m)</span><input class="inp" id="ngW" inputmode="decimal" value="30"></label><label class="field grow"><span>Profondeur (m)</span><input class="inp" id="ngH" inputmode="decimal" value="20"></label></div>
+    <p class="small muted">Une estimation suffit : tu pourras changer la taille plus tard.</p>`,
+    foot:`<button class="btn" data-act="ngCreate">Créer la salle</button>`}));
+}
+function openGymSettings(){
+  const gym=curGym();
+  pushSheet(()=>({eyebrow:'Salle',title:esc(gym.name),body:`<label class="field"><span>Nom</span><input class="inp" id="gsName" data-in="gsName" value="${esc(gym.name)}"></label>
+    <div class="row"><label class="field grow"><span>Largeur (m)</span><input class="inp" id="gsW" data-in="gsDim" data-k="w" inputmode="decimal" value="${fmt(gym.w)}"></label><label class="field grow"><span>Profondeur (m)</span><input class="inp" id="gsH" data-in="gsDim" data-k="h" inputmode="decimal" value="${fmt(gym.h)}"></label></div>`,
+    foot:`<button class="btn danger" data-act="delGym">${ic('trash')} Supprimer la salle</button><button class="btn" data-act="closeSheet">OK</button>`}));
+}
+
+/* ---------- création de séance : 1. la salle, 2. muscles → exercice et poids ---------- */
+function openPlanBuilder(planId){
+  const p=planId?getPlan(planId):null;
+  ui.pb=p?clone(p):{id:uid('p'),name:'',gymId:S.gyms.length===1?S.gyms[0].id:null,muscles:[],items:[]};
+  if(p&&!ui.pb.muscles)ui.pb.muscles=[...new Set(p.items.map(i=>i.muscle))];
+  pushSheet(sheetPlan,{full:true});
+}
+function sheetPlan(){
+  const pb=ui.pb,gym=getGym(pb.gymId),editing=!!getPlan(pb.id);
+  if(!gym)return{eyebrow:'Nouvelle séance · étape 1',title:'Choisis la salle',body:S.gyms.length?`<div class="list">${S.gyms.map(g=>`<button class="li" data-act="pbGym" data-id="${g.id}"><span class="grow"><span class="t">${esc(g.name)}</span><br><span class="small muted">${machinesOf(g).length} machine${machinesOf(g).length>1?'s':''}</span></span>${ic('next')}</button>`).join('')}</div>`
+    :`<p class="muted">Crée d'abord une salle pour y choisir tes machines.</p><button class="btn" data-act="tab" data-tab="salle">Créer une salle</button>`};
+  let b=`<div class="row"><span class="grow small muted">Salle : <b style="color:var(--ink)">${esc(gym.name)}</b></span>${S.gyms.length>1?`<button class="link" data-act="pbGym" data-id="">Changer</button>`:''}</div>
+    <label class="field"><span>Nom de la séance</span><input class="inp" id="pbName" data-in="pbName" value="${esc(pb.name)}" placeholder="Ex. Pecs-triceps, Jambes"></label>
+    <div class="stack"><span class="eyebrow">Muscles</span><div class="chips">${MUSCLES.map(m=>`<button class="chip${pb.muscles.includes(m.id)?' on':''}" data-act="pbMus" data-m="${m.id}">${m.name}</button>`).join('')}</div></div>`;
+  for(const mus of pb.muscles){
+    const ms=uniqMachines(gym).filter(m=>entryOf(m).muscles.includes(mus));
+    b+=`<div class="stack"><h3 class="h3">${MUSCLE[mus]}</h3>`;
+    if(!ms.length)b+=`<p class="small muted">Aucune machine de cette salle n'est notée pour ce muscle.</p>`;
+    for(const m of ms){
+      const i=pb.items.findIndex(it=>it.machineId===m.id&&it.muscle===mus),on=i>=0;
+      b+=`<button class="pick${on?' on':''}" data-act="pbToggle" data-m="${m.id}" data-mu="${mus}"><span class="ck">${on?ic('check'):''}</span><b class="grow">${esc(m.name)}</b><span class="muted">${fmt(entryOf(m).weight)} kg</span></button>`;
+    }
+    b+=`</div>`;
+  }
+  return{eyebrow:editing?'Modifier la séance':'Nouvelle séance · étape 2',title:esc(pb.name||'Ma séance'),body:b,
+    foot:`<button class="btn" data-act="pbSave"${pb.items.length?'':' disabled'}>Enregistrer la séance</button>`};
+}
+
+/* ============ séance en cours ============ */
+function startSession(planId){
+  const p=getPlan(planId),gym=getGym(p?.gymId);if(!gym)return;
+  const items=p.items.filter(it=>getItem(gym,it.machineId)).map(it=>({machineId:it.machineId,muscle:it.muscle,done:false}));
+  A={planId,name:p.name,gymId:gym.id,cur:0,items,startedAt:Date.now(),updatedAt:Date.now()};
+  Store.saveSession();closeAllSheets();openSessionView();
+}
+function openSessionView(){if(!A)return;$('#session').hidden=false;$('#session').innerHTML='';renderSession();wake(true)}
+function closeSessionView(){$('#session').hidden=true;$('#session').innerHTML='';wake(false);render()}
+function renderSession(){
+  const el=$('#session'),gym=getGym(A.gymId);
+  if(!el.querySelector('.ss-card')){
+    el.innerHTML=`<div class="ss-top gut"><div class="grow" style="min-width:0"><div class="eyebrow" style="color:var(--on-dark-2)">${esc(gym?.name||'')}</div><div class="h3">${esc(A.name)}</div></div><button class="btn sm" data-act="finish">Terminer</button></div>
+      <div class="ss-map" id="ssMap"></div><div class="ss-card gut" id="ssCard"></div>`;
+    ui._ss=gym?mountMap($('#ssMap'),gym.id,'session','ss'):null;
+  }else if(ui._ss)drawMap(ui._ss);
+  const it=A.items[A.cur],m=it&&getItem(gym,it.machineId),allDone=A.items.every(x=>x.done);
+  let h='';
+  if(allDone)h+=`<div class="stack" style="align-items:flex-start"><span class="h1">Séance finie</span><p class="muted">Bien joué. Termine pour cocher la journée dans ton profil.</p><button class="btn wide" data-act="finish">${ic('check')} Terminer</button></div>`;
+  else h+=`<div class="stack"><span class="eyebrow">Machine ${A.cur+1}/${A.items.length} · ${esc(MUSCLE[it.muscle]||'')}</span><h2 class="h1">${esc(m?.name||'Machine')}</h2><div class="kgline"><span class="kg">${fmt(m?entryOf(m).weight:0)}<small>kg</small></span><span class="muted">3 × 12</span></div>
+    <button class="btn wide" data-act="nextMachine">${A.items.filter(x=>!x.done).length>1?'Machine suivante':'Dernière machine faite'}</button></div>`;
+  h+=`<div>${A.items.map((x,i)=>`<button class="step${x.done?' done':''}${i===A.cur&&!allDone?' cur':''}" data-act="jump" data-i="${i}"><span class="n">${x.done?ic('check'):i+1}</span><span class="t grow">${esc(getItem(gym,x.machineId)?.name||'')}</span><span class="muted">${fmt(entryOf(getItem(gym,x.machineId))?.weight||0)} kg</span></button>`).join('')}</div>`;
+  $('#ssCard').innerHTML=h;
+}
+function finishSession(){
+  const k=dayKey(Date.now()),gym=getGym(A.gymId);if(!S.days.includes(k))S.days.push(k);
+  const items=A.items.filter(x=>x.done).map(x=>{const b=getItem(gym,x.machineId),e=b?entryOf(b):null;return{name:b?.name||'',muscle:x.muscle,muscles:e?.muscles?.length?e.muscles.slice():[x.muscle]}});
+  if(items.length)S.log.push({t:Date.now(),items});
+  Store.saveMain();
+  A=null;Store.saveSession();closeSessionView();toast('Séance terminée, journée cochée');
+}
+let wl=null;
+async function wake(on){try{if(on&&!wl&&navigator.wakeLock){wl=await navigator.wakeLock.request('screen');wl.addEventListener?.('release',()=>{wl=null})}else if(!on&&wl){await wl.release();wl=null}}catch(_){wl=null}}
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='visible'&&A)wake(true)});
+
+let _tt=null;
+function toast(msg){const t=$('#toast');t.textContent=msg;t.hidden=false;clearTimeout(_tt);_tt=setTimeout(()=>{t.hidden=true},2400)}
+
+/* ============ actions ============ */
+const ACT={
+  tab:d=>{ui.tab=d.tab;if(d.tab!=='salle'){ui.edit=false;ui.sel=null;ui.tool='select'}if(location.hash!=='#'+d.tab)history.replaceState(null,'','#'+d.tab);closeAllSheets();render();$('#main').scrollTop=0},
+  closeSheet:()=>popSheet(),
+  confirmOk:()=>{const t=top_();popSheet();t?.onOk?.()},
+  // salles
+  newGym:()=>openNewGym(),
+  openGyms:()=>openGyms(),
+  ngCreate:()=>{
+    const name=$('#ngName').value.trim()||'Ma salle',w=clamp(num($('#ngW').value)||30,4,150),h=clamp(num($('#ngH').value)||20,4,150);
+    const g={id:uid('g'),name,w,h,items:[]};S.gyms.push(g);ui.gymId=g.id;ui.edit=true;ui.tool='select';ui.sel=null;
+    Store.saveMain();closeAllSheets();ui.tab='salle';history.replaceState(null,'','#salle');render();
+  },
+  pickGym:d=>{ui.gymId=d.id;ui.sel=null;closeAllSheets();render()},
+  gymSettings:()=>openGymSettings(),
+  delGym:()=>{const g=curGym();confirmBox('Supprimer la salle ?',`« ${esc(g.name)} » et son plan seront supprimés, ainsi que ses séances.`,'Supprimer',()=>{S.gyms=S.gyms.filter(x=>x.id!==g.id);S.plans=S.plans.filter(p=>p.gymId!==g.id);ui.gymId=S.gyms[0]?.id||null;ui.edit=false;Store.saveMain();closeAllSheets();render()})},
+  editStart:()=>{ui.edit=true;ui.tool='select';ui.sel=null;render()},
+  editDone:()=>{ui.edit=false;ui.sel=null;ui.draft=null;ui.tool='select';render()},
+  toolWall:()=>{ui.tool=ui.tool==='wall'?'select':'wall';ui.sel=null;render()},
+  addMachine:()=>{ui.tool='select';openMachine(curGym().id,null)},
+  itEdit:()=>openMachine(curGym().id,ui.sel),
+  itDel:()=>{const g=curGym();g.items=g.items.filter(x=>x.id!==ui.sel);S.plans.forEach(p=>{if(p.gymId===g.id)p.items=p.items.filter(i=>i.machineId!==ui.sel)});ui.sel=null;Store.saveMain();render()},
+  fitMap:d=>{const M=maps[d.k];if(!M)return;Object.assign(M.vb,fitVB(getGym(M.gymId)));applyVB(M)},
+  // machine
+  mMus:d=>{const t=top_(),e=sheetEntry(t);if(!e)return;const i=e.muscles.indexOf(d.x);if(i>=0)e.muscles.splice(i,1);else e.muscles.push(d.x);if(e!==t.draft)Store.saveMain();refreshSheet()},
+  mPick:d=>{const t=top_(),e=S.machines[d.k];if(!e)return;t.draft.name=e.name;t.histOn=false;refreshSheet()},
+  mAdd:()=>{
+    const t=top_(),gym=getGym(t.gymId),name=t.draft.name.trim(),k=mkey(name);
+    if(!name){toast('Donne un nom à la machine');$('#mName')?.focus();return}
+    if(!S.machines[k])S.machines[k]={name,muscles:t.draft.muscles.slice(),weight:t.draft.weight,hist:[{t:Date.now(),w:t.draft.weight}]};
+    const m={id:uid('m'),kind:'machine',name:S.machines[k].name,w:1.5,h:1.5,x:0,y:0};
+    const M=maps.salle;let c={x:gym.w/2,y:gym.h/2};
+    if(M&&M.svg.isConnected){const r=M.svg.getBoundingClientRect();c=toRoom(M,r.left+r.width/2,r.top+r.height/2)}
+    m.x=clamp(snap(c.x-m.w/2),0,Math.max(0,gym.w-m.w));m.y=clamp(snap(c.y-m.h/2),0,Math.max(0,gym.h-m.h));
+    gym.items.push(m);ui.sel=m.id;Store.saveMain();closeAllSheets();render();toast('Glisse le bloc à sa place');
+  },
+  mDel:()=>{const t=top_(),g=getGym(t.gymId),b=getItem(g,t.mid);if(!b)return;confirmBox('Retirer du plan ?',`Le bloc « ${esc(b.name)} » sera retiré de cette salle et de ses séances. La machine reste en mémoire avec son poids.`,'Retirer',()=>{g.items=g.items.filter(x=>x.id!==b.id);S.plans.forEach(p=>{if(p.gymId===g.id)p.items=p.items.filter(i=>i.machineId!==b.id)});ui.sel=null;Store.saveMain();closeAllSheets();render()})},
+  mEvo:d=>openMachineEvo(d.k),
+  wStep:d=>{const inp=document.getElementById(d.for);if(!inp)return;inp.value=fmt(Math.max(0,Math.round((num(inp.value)+(+d.d)*2.5)*100)/100));IN.weight(inp)},
+  // séances
+  newPlan:()=>{if(!S.gyms.length){ACT.tab({tab:'salle'});toast('Crée d\'abord une salle');return}openPlanBuilder(null)},
+  editPlan:d=>openPlanBuilder(d.id),
+  delPlan:d=>{const p=getPlan(d.id);confirmBox('Supprimer la séance ?',`« ${esc(p.name)} » sera supprimée.`,'Supprimer',()=>{S.plans=S.plans.filter(x=>x.id!==d.id);Store.saveMain();closeAllSheets();render()})},
+  pbGym:d=>{ui.pb.gymId=d.id||null;ui.pb.items=[];refreshSheet()},
+  pbMus:d=>{const pb=ui.pb,i=pb.muscles.indexOf(d.m);if(i>=0){pb.muscles.splice(i,1);pb.items=pb.items.filter(it=>it.muscle!==d.m)}else pb.muscles.push(d.m);refreshSheet()},
+  pbToggle:d=>{const pb=ui.pb,i=pb.items.findIndex(it=>it.machineId===d.m&&it.muscle===d.mu);if(i>=0)pb.items.splice(i,1);else{const at=pb.items.reduce((a,it,k)=>pb.muscles.indexOf(it.muscle)<=pb.muscles.indexOf(d.mu)?k+1:a,0);pb.items.splice(at,0,{machineId:d.m,muscle:d.mu})}refreshSheet()},
+  pbSave:()=>{const pb=ui.pb;if(!pb.name.trim())pb.name=pb.muscles.map(m=>MUSCLE[m]).slice(0,3).join(' · ');const i=S.plans.findIndex(p=>p.id===pb.id);if(i>=0)S.plans[i]=clone(pb);else S.plans.push(clone(pb));Store.saveMain();closeAllSheets();ui.tab='seances';render();toast('Séance enregistrée')},
+  startPlan:d=>{if(A){openSessionView();toast('Une séance est déjà en cours');return}startSession(d.id)},
+  // séance en cours
+  nextMachine:()=>{A.items[A.cur].done=true;const n=A.items.findIndex((x,i)=>i>A.cur&&!x.done),f=A.items.findIndex(x=>!x.done);A.cur=n>=0?n:f>=0?f:A.cur;Store.saveSession();renderSession();$('#ssCard').scrollTop=0},
+  jump:d=>{const i=+d.i;A.items[i].done=false;A.cur=i;Store.saveSession();renderSession()},
+  finish:()=>finishSession(),
+  // profil
+  calMove:d=>{const c=ui.cal,t=new Date(c.y,c.m+(+d.d),1);ui.cal={y:t.getFullYear(),m:t.getMonth()};render()},
+};
+const IN={
+  mNewName:el=>{
+    const t=top_(),before=mkey(t.draft.name);t.draft.name=el.value;
+    if(mkey(el.value)!==before)t.histOn=false;
+    const sg=$('#mSug'),dt=$('#mDet');if(sg)sg.innerHTML=newSug(t);if(dt)dt.innerHTML=newDet(t);
+  },
+  weight:el=>{
+    const t=top_(),e=t&&sheetEntry(t);if(!e)return;
+    e.weight=Math.max(0,num(el.value));
+    if(e!==t.draft){trackWeight(t,e);Store.saveMain()}
+  },
+  pbName:el=>{ui.pb.name=el.value;const h=$('#shTitle');if(h)h.textContent=el.value||'Ma séance'},
+  gsName:el=>{const g=curGym();if(el.value.trim()){g.name=el.value.trim();Store.saveMain();const h=$('#shTitle');if(h)h.textContent=g.name}},
+  gsDim:el=>{const g=curGym(),v=num(el.value);if(v>=4&&v<=150){g[el.dataset.k]=v;Store.saveMain()}},
+};
+document.addEventListener('click',e=>{const el=e.target.closest('[data-act]');if(!el||el.disabled)return;const fn=ACT[el.dataset.act];if(fn){e.preventDefault();fn(el.dataset,el,e)}});
+document.addEventListener('input',e=>{const el=e.target.closest('[data-in]');if(el)IN[el.dataset.in]?.(el,e)});
+const CH={mRename:el=>renameMachine(top_(),el.value)};
+document.addEventListener('change',e=>{const el=e.target.closest('[data-ch]');if(el)CH[el.dataset.ch]?.(el,e)});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&ui.sheets.length)popSheet()});
+document.addEventListener('focusin',e=>{if(e.target.matches?.('.wt input'))setTimeout(()=>{try{e.target.select()}catch(_){}},0)});
+window.addEventListener('hashchange',()=>{const t=location.hash.slice(1);if(TABS.includes(t)&&t!==ui.tab){ui.tab=t;closeAllSheets();render()}});
+window.addEventListener('resize',()=>{for(const M of Object.values(maps))if(M.svg.isConnected)applyVB(M)});
+
+/* ============ démarrage ============ */
+function start(){
+  S=normalize(LS.get('main'));A=LS.get('session');
+  const t=location.hash.slice(1);if(TABS.includes(t))ui.tab=t;
+  render();if(A)openSessionView();
+  Store.init();
+}
+window.claude?.hot?.ready?window.claude.hot.ready(start):start();
+</script>
+<script>
+/* ============ appli installée : import des données, installation, hors connexion ============ */
+(function(){
+  const h=location.hash;
+  if(h.startsWith('#import=')){
+    let d=null;
+    try{
+      let b=h.slice(8).replace(/-/g,'+').replace(/_/g,'/');while(b.length%4)b+='=';
+      const bin=atob(b),bytes=Uint8Array.from(bin,c=>c.charCodeAt(0));
+      d=JSON.parse(new TextDecoder().decode(bytes));
+    }catch(e){d=null}
+    history.replaceState(null,'','./#salle');
+    if(!d||d.v!==2){toast('Le lien de transfert est incomplet. Réessaie depuis la version Claude.');return}
+    const n=x=>Array.isArray(x)?x.length:Object.keys(x||{}).length;
+    confirmBox('Importer tes données ?',`${n(d.gyms)} salle(s), ${n(d.machines)} machine(s) et ${n(d.plans)} séance(s). Ce qui est déjà dans l'appli sera remplacé.`,'Importer',()=>{
+      S=normalize(d);A=null;Store.saveMain();Store.saveSession();ui.gymId=null;ui.tab='salle';render();toast('Données importées');
+    });
+  }
+})();
+let installEvt=null;
+window.addEventListener('beforeinstallprompt',e=>{e.preventDefault();installEvt=e;$('#installBtn').hidden=false});
+$('#installBtn').addEventListener('click',async()=>{if(!installEvt)return;installEvt.prompt();await installEvt.userChoice;installEvt=null;$('#installBtn').hidden=true});
+window.addEventListener('appinstalled',()=>{$('#installBtn').hidden=true;toast('MaSalle est installée')});
+if('serviceWorker' in navigator)navigator.serviceWorker.register('sw.js');
+try{navigator.storage?.persist?.()}catch(_){}
+</script>
+</body>
+</html>
