@@ -402,7 +402,7 @@ function blockText(m){
 function mapContent(M){
   const gym=getGym(M.gymId);if(!gym)return'';
   const W_=gym.w*U,H_=gym.h*U,sel=M.mode==='edit'?ui.sel:null;
-  let s=`<rect class="pl-floor" width="${W_}" height="${H_}"/><rect width="${W_}" height="${H_}" fill="url(#g1${M.uid})"/><rect width="${W_}" height="${H_}" fill="url(#g5${M.uid})"/><rect class="pl-outer" width="${W_}" height="${H_}"/>`;
+  let s=`<rect class="pl-floor" width="${W_}" height="${H_}"/><rect width="${W_}" height="${H_}" fill="url(#g1${M.uid})"/><rect width="${W_}" height="${H_}" fill="url(#g5${M.uid})"/>${gym.outer===false?'':`<rect class="pl-outer" width="${W_}" height="${H_}"/>`}`;
   for(const w of gym.items.filter(i=>i.kind==='wall')){
     s+=`<g class="pl-wallg${sel===w.id?' sel':''}" data-id="${w.id}"><line class="pl-wall" x1="${w.x1*U}" y1="${w.y1*U}" x2="${w.x2*U}" y2="${w.y2*U}"/>`+
       (M.mode==='edit'?`<line class="pl-hit" x1="${w.x1*U}" y1="${w.y1*U}" x2="${w.x2*U}" y2="${w.y2*U}"/>`:'')+
@@ -798,11 +798,12 @@ function openPhotoImport(){
 function sheetPhoto(){
   if(!PH.src)return{eyebrow:'Salle depuis une photo · 1/3',title:'Photo du plan',body:`<p class="muted">Prends en photo le plan de ta salle, par exemple le plan d'évacuation affiché au mur : bien de face, en entier. Les murs seront tracés tout seuls, tes machines ne bougent pas.</p>
     <label class="btn">${ic('camera')} Prendre ou choisir une photo<input type="file" id="phFile" data-ch="phFile" accept="image/*" hidden></label>`};
-  if(!PH.walls)return{eyebrow:'Salle depuis une photo · 2/3',title:'Touche les 4 coins',body:`<p class="small muted">Touche les 4 angles des murs extérieurs de la salle sur la photo (${PH.corners.length}/4).</p>
+  if(!PH.walls)return{eyebrow:'Salle depuis une photo · 2/3',title:'Touche les 4 coins',body:`<p class="small muted">Touche les 4 angles des murs extérieurs de la salle (${PH.corners.length}/4). Si elle n'est pas rectangulaire, touche les 4 coins d'un rectangle qui l'entoure, un peu plus large qu'elle.</p>
     <canvas id="phCv" class="ph-cv"></canvas>
     <div class="row"><button class="btn ghost sm" data-act="phReset"${PH.corners.length?'':' disabled'}>Recommencer</button><button class="btn ghost sm" data-act="phWhole">Toute la photo</button></div>`};
   const n=PH.walls.length;
   return{eyebrow:'Salle depuis une photo · 3/3',title:`${n} mur${n>1?'s':''} trouvé${n>1?'s':''}`,body:`<canvas id="phCv" class="ph-cv"></canvas>
+    <p class="small muted">${PH.isRect?'Salle rectangulaire : le contour est tracé automatiquement.':'Salle non rectangulaire : le contour vient des murs trouvés sur le plan. Indique la taille réelle de la zone encadrée.'}</p>
     <div class="row"><label class="field grow"><span>Largeur réelle (m)</span><input class="inp" id="phW" data-ch="phDim" data-k="w" inputmode="decimal" value="${fmt(PH.w)}"></label><label class="field grow"><span>Profondeur réelle (m)</span><input class="inp" id="phH" data-ch="phDim" data-k="h" inputmode="decimal" value="${fmt(PH.h)}"></label></div>
     <label class="field"><span>Sensibilité · ${PH.sens}/5</span><input type="range" id="phSens" data-ch="phSens" min="1" max="5" step="1" value="${PH.sens}"></label>
     <p class="small muted">Trop de faux murs : baisse la sensibilité. Des murs manquent : monte-la. Tu pourras ensuite corriger à la main.</p>
@@ -829,7 +830,7 @@ function drawPhoto(el){
   const c=cv.getContext('2d');c.setTransform(s*dpr,0,0,s*dpr,0,0);
   if(PH.walls){
     c.globalAlpha=0.45;c.drawImage(img,0,0);c.globalAlpha=1;
-    c.strokeStyle='#161616';c.lineWidth=7/s;c.strokeRect(0,0,img.width,img.height);
+    if(PH.isRect){c.strokeStyle='#161616';c.lineWidth=7/s;c.strokeRect(0,0,img.width,img.height)}
     c.strokeStyle='#FE7000';c.lineWidth=5/s;c.lineCap='round';
     for(const w of PH.walls){c.beginPath();c.moveTo(w.x1/PH.w*img.width,w.y1/PH.h*img.height);c.lineTo(w.x2/PH.w*img.width,w.y2/PH.h*img.height);c.stroke()}
     return;
@@ -843,7 +844,7 @@ function drawPhoto(el){
   cv.onpointerdown=e=>{
     const r=cv.getBoundingClientRect();
     PH.corners.push([(e.clientX-r.left)/r.width*img.width,(e.clientY-r.top)/r.height*img.height]);
-    if(PH.corners.length===4){PH.corners=refineCorners(PH.src,PH.corners);runDetect(true)}
+    if(PH.corners.length===4){PH.raw=PH.corners.slice();PH.corners=refineCorners(PH.src,PH.corners);runDetect(true)}
     refreshSheet();
   };
 }
@@ -916,6 +917,46 @@ function bands(dark,W,H,minLen,vert){
   }
   return done.concat(open).map(c=>({p:(c.a0+c.a1)/2,s:c.s,e:c.e,a0:Math.max(0,c.a0),a1:Math.min(A-1,c.a1),t:Math.max(1,c.a1-c.a0+1-2*SPREAD)}));
 }
+// Murs en biais : transformée de Hough sur les pixels sombres, hors des angles proches de l'horizontale et de la verticale.
+function diagWalls(dark,g,W,H,minLen,minT,covMin,inkMax){
+  const TH=[];for(let d=12;d<=78;d++)TH.push(d);for(let d=102;d<=168;d++)TH.push(d);
+  const cs=TH.map(d=>Math.cos(d*Math.PI/180)),sn=TH.map(d=>Math.sin(d*Math.PI/180)),D=Math.ceil(Math.hypot(W,H)),NR=D+1,acc=new Int32Array(TH.length*NR);
+  for(let y=0;y<H;y++)for(let x=y&1;x<W;x+=2){if(!dark[y*W+x])continue;for(let i=0;i<TH.length;i++)acc[i*NR+Math.round((x*cs[i]+y*sn[i]+D)/2)]++}
+  const cand=[];for(let i=0;i<acc.length;i++)if(acc[i]>=minLen*0.9)cand.push(i);
+  cand.sort((a,b)=>acc[b]-acc[a]);
+  const peaks=[];
+  for(const c of cand){const ti=(c/NR)|0,ri=c%NR;if(peaks.some(p=>Math.abs(TH[p.ti]-TH[ti])<=3&&Math.abs(p.ri-ri)<=5))continue;peaks.push({ti,ri});if(peaks.length>=40)break}
+  const band=(x,y,c,s,fn)=>{for(let o=-SPREAD-1;o<=SPREAD+1;o++){const xx=Math.round(x+c*o),yy=Math.round(y+s*o);if(xx>=0&&yy>=0&&xx<W&&yy<H)fn(yy*W+xx)}};
+  const segs=[];
+  for(const p of peaks){
+    const th=TH[p.ti]*Math.PI/180,c=Math.cos(th),s=Math.sin(th),rho=p.ri*2-D,x0=rho*c,y0=rho*s,dx=-s,dy=c,runs=[];
+    let run=null,last=-99;
+    for(let t=-D;t<=D;t++){
+      const x=x0+dx*t,y=y0+dy*t;if(x<0||y<0||x>=W||y>=H)continue;
+      let hit=0;band(x,y,c,s,i=>{if(dark[i])hit=1});
+      if(hit){if(!run||t-last>3){if(run&&run.e-run.s>=minLen)runs.push(run);run={s:t,e:t}}run.e=t;last=t}
+    }
+    if(run&&run.e-run.s>=minLen)runs.push(run);
+    for(const r of runs){
+      let cov=0,dk=0,sum=0,mid=0;const tk=[];
+      for(let t=r.s;t<=r.e;t++){
+        const x=x0+dx*t,y=y0+dy*t;let n=0;band(x,y,c,s,i=>{if(dark[i]){n++;dk++;sum+=g[i]}});cov+=n?1:0;if((t-r.s)%8===0)tk.push(n);
+        for(let o=-1;o<=1;o++){const xx=Math.round(x+c*o),yy=Math.round(y+s*o);if(xx>=0&&yy>=0&&xx<W&&yy<H&&dark[yy*W+xx]){mid++;break}}
+      }
+      tk.sort((a,b)=>a-b);const len=r.e-r.s+1;
+      // un mur est un trait continu bien centré ; une ligne de texte est hachée
+      if(cov/len>=covMin+0.15&&mid/len>=0.85&&dk&&sum/dk<=inkMax&&(tk[tk.length>>1]||0)>=minT)
+        segs.push({x1:x0+dx*r.s,y1:y0+dy*r.s,x2:x0+dx*r.e,y2:y0+dy*r.e,ang:TH[p.ti],l:r.e-r.s});
+    }
+  }
+  // doublons : deux pics voisins sur le même mur épais
+  segs.sort((a,b)=>b.l-a.l);
+  return segs.filter((a,i)=>!segs.slice(0,i).some(b=>{
+    if(Math.abs(a.ang-b.ang)>6)return false;
+    const L=Math.hypot(b.x2-b.x1,b.y2-b.y1)||1,ux=(b.x2-b.x1)/L,uy=(b.y2-b.y1)/L,mx=(a.x1+a.x2)/2-b.x1,my=(a.y1+a.y2)/2-b.y1;
+    const along=mx*ux+my*uy;return Math.abs(mx*uy-my*ux)<=10&&along>=-a.l/2&&along<=L+a.l/2;
+  }));
+}
 function detectWalls(g,W,H,sens){
   const k=SENS.k[sens-1],L=Math.max(W,H),minLen=Math.round(L*SENS.len[sens-1]);
   const R=Math.max(10,Math.round(L/20)),ii=new Float64Array((W+1)*(H+1));
@@ -931,7 +972,11 @@ function detectWalls(g,W,H,sens){
     for(let b=x.s;b<=x.e;b++){let hit=0;for(let a=x.a0;a<=x.a1;a++){const i=vert?b*W+a:a*W+b;if(dark[i]){hit=1;dk++;sum+=g[i]}}cov+=hit}
     return dk&&cov/(x.e-x.s+1)>=covMin+0.15&&sum/dk<=inkMax;
   };
-  const keep=(b,ext,vert)=>b.filter(x=>x.t>=minT&&x.t<=maxT&&x.e-x.s>=minLen&&x.p>ext*0.035&&x.p<ext*0.965&&solid(x,vert));
+  // Salle rectangulaire si les 4 bords du cadre sont des murs : le contour est alors tracé à part.
+  const edge=(horiz,far)=>{const bw=Math.max(3,Math.round(L*0.02)),A=horiz?W:H,B=horiz?H:W;let hit=0,n=0;
+    for(let i=0;i<A;i+=2){n++;for(let k=0;k<bw;k++){const a=far?B-1-k:k;if(horiz?dark[a*W+i]:dark[i*W+a]){hit++;break}}}return hit/n};
+  const rect=edge(true,false)>0.6&&edge(true,true)>0.6&&edge(false,false)>0.6&&edge(false,true)>0.6;
+  const keep=(b,ext,vert)=>b.filter(x=>x.t>=minT&&x.t<=maxT&&x.e-x.s>=minLen&&(!rect||x.p>ext*0.035&&x.p<ext*0.965)&&solid(x,vert));
   const merge=list=>{
     list.sort((a,b)=>a.p-b.p||a.s-b.s);const out=[];
     for(const x of list){
@@ -945,19 +990,39 @@ function detectWalls(g,W,H,sens){
   const tol=L*0.02,stick=(segs,cross,ext)=>segs.forEach(x=>{
     for(const end of['s','e']){
       const c=cross.filter(o=>Math.abs(o.p-x[end])<=o.t/2+tol&&x.p>=o.s-tol&&x.p<=o.e+tol).sort((a,b)=>Math.abs(a.p-x[end])-Math.abs(b.p-x[end]))[0];
-      if(c)x[end]=c.p;else if(x[end]<ext*0.05)x[end]=0;else if(x[end]>ext*0.95)x[end]=ext;
+      if(c)x[end]=c.p;else if(rect&&x[end]<ext*0.05)x[end]=0;else if(rect&&x[end]>ext*0.95)x[end]=ext;
     }
   });
   stick(hs,vs,W);stick(vs,hs,H);
-  const all=hs.map(x=>({x1:x.s,y1:x.p,x2:x.e,y2:x.p,l:x.e-x.s})).concat(vs.map(x=>({x1:x.p,y1:x.s,x2:x.p,y2:x.e,l:x.e-x.s})));
-  return all.sort((a,b)=>b.l-a.l).slice(0,60);
+  const hv=hs.map(x=>({x1:x.s,y1:x.p,x2:x.e,y2:x.p,l:x.e-x.s,t:x.t})).concat(vs.map(x=>({x1:x.p,y1:x.s,x2:x.p,y2:x.e,l:x.e-x.s,t:x.t})));
+  // un trait en biais qui longe un mur droit n'est pas un mur en biais
+  const bw=L*0.035,onHV=(x,y)=>(rect&&(x<bw||y<bw||x>W-bw||y>H-bw))||hv.some(w=>{const h=w.y1===w.y2,pd=h?Math.abs(y-w.y1):Math.abs(x-w.x1),al=h?x:y,a=h?w.x1:w.y1,b=h?w.x2:w.y2;return pd<=w.t/2+4&&al>=a-4&&al<=b+4});
+  const ds=diagWalls(dark,g,W,H,Math.round(minLen*1.4),minT,covMin,inkMax).filter(d=>{let n=0;for(let k=0;k<=10;k++)if(onHV(d.x1+(d.x2-d.x1)*k/10,d.y1+(d.y2-d.y1)*k/10))n++;return n<6});
+  // et inversement : un bout de mur droit posé sur un mur en biais n'en est qu'un morceau
+  const onDiag=(x,y)=>ds.some(d=>{const L=Math.hypot(d.x2-d.x1,d.y2-d.y1)||1,ux=(d.x2-d.x1)/L,uy=(d.y2-d.y1)/L,mx=x-d.x1,my=y-d.y1,al=mx*ux+my*uy;return Math.abs(mx*uy-my*ux)<=SPREAD+6&&al>=-6&&al<=L+6});
+  for(let i=hv.length-1;i>=0;i--){const w=hv[i];let n=0;for(let k=0;k<=10;k++)if(onDiag(w.x1+(w.x2-w.x1)*k/10,w.y1+(w.y2-w.y1)*k/10))n++;if(n>=6)hv.splice(i,1)}
+  // bouts des murs en biais raccordés au bout de mur le plus proche
+  const ends=hv.flatMap(w=>[[w.x1,w.y1],[w.x2,w.y2]]),dtol=L*0.025;
+  ds.forEach((d,i)=>{for(const k of[1,2]){
+    const ex=d['x'+k],ey=d['y'+k];let best=null,bd=dtol;
+    for(const p of ends){const dd=Math.hypot(p[0]-ex,p[1]-ey);if(dd<bd){bd=dd;best=p}}
+    ds.forEach((o,j)=>{if(j===i)return;for(const m of[1,2]){const dd=Math.hypot(o['x'+m]-ex,o['y'+m]-ey);if(dd<bd){bd=dd;best=[(o['x'+m]+ex)/2,(o['y'+m]+ey)/2];o['x'+m]=best[0];o['y'+m]=best[1]}}});
+    if(best){d['x'+k]=best[0];d['y'+k]=best[1]}
+  }});
+  const all=hv.concat(ds);
+  return{rect,walls:all.sort((a,b)=>b.l-a.l).slice(0,70)};
 }
 function runDetect(again){
-  if(again||!PH.gray){
-    const q=orderCorners(PH.corners),L=900,ar=PH.w/PH.h,W=ar>=1?L:Math.round(L*ar),H=ar>=1?Math.round(L/ar):L;
+  const straighten=P=>{
+    const q=orderCorners(P),L=900,ar=PH.w/PH.h,W=ar>=1?L:Math.round(L*ar),H=ar>=1?Math.round(L/ar):L;
     const r=rectify(PH.src,q,W,H);Object.assign(PH,{rect:r.canvas,gray:r.gray,W,H});
-  }
-  PH.walls=detectWalls(PH.gray,PH.W,PH.H,PH.sens)
+  };
+  if(again||!PH.gray)straighten(PH.corners);
+  let r=detectWalls(PH.gray,PH.W,PH.H,PH.sens);
+  // salle non rectangulaire : les coins touchés encadrent la salle, on ne les recale pas sur des angles de murs
+  if(again&&!r.rect&&PH.raw){straighten(PH.raw);r=detectWalls(PH.gray,PH.W,PH.H,PH.sens)}
+  PH.isRect=r.rect;
+  PH.walls=r.walls
     .map(s=>({x1:snap(s.x1/PH.W*PH.w),y1:snap(s.y1/PH.H*PH.h),x2:snap(s.x2/PH.W*PH.w),y2:snap(s.y2/PH.H*PH.h)}))
     .filter(s=>Math.hypot(s.x2-s.x1,s.y2-s.y1)>=0.5);
 }
@@ -1057,11 +1122,11 @@ const ACT={
   openImport:()=>pushSheet(()=>({title:'Importer mes données',body:`<textarea class="inp" id="codeIn" rows="6" placeholder="Colle ici le code copié depuis la version Claude" aria-label="Code à importer"></textarea>`,foot:`<button class="btn" data-act="doImport">Importer</button>`})),
   doImport:()=>importCode($('#codeIn').value),
   phOpen:()=>openPhotoImport(),
-  phReset:()=>{PH.corners=[];PH.walls=null;PH.gray=null;refreshSheet()},
-  phWhole:()=>{const s=PH.src;PH.corners=[[0,0],[s.width,0],[s.width,s.height],[0,s.height]];runDetect(true);refreshSheet()},
+  phReset:()=>{PH.corners=[];PH.raw=null;PH.walls=null;PH.gray=null;refreshSheet()},
+  phWhole:()=>{const s=PH.src;PH.corners=[[0,0],[s.width,0],[s.width,s.height],[0,s.height]];PH.raw=null;runDetect(true);refreshSheet()},
   phApply:()=>{
     const g=getGym(PH.gymId);if(!g)return;
-    g.w=PH.w;g.h=PH.h;
+    g.w=PH.w;g.h=PH.h;g.outer=!!PH.isRect;
     g.items=g.items.filter(i=>i.kind!=='wall').concat(PH.walls.map(w=>({id:uid('w'),kind:'wall',...w})));
     for(const m of machinesOf(g)){m.x=clamp(m.x,0,Math.max(0,g.w-m.w));m.y=clamp(m.y,0,Math.max(0,g.h-m.h))}
     const n=PH.walls.length;ui.sel=null;Store.saveMain();closeAllSheets();render();toast(`${n} mur${n>1?'s':''} placé${n>1?'s':''} : corrige ce qui ne va pas`);
