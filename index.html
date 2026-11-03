@@ -163,6 +163,15 @@ svg.plan{width:100%;height:100%;display:block;touch-action:none;user-select:none
 .blk.cur .blk-r{stroke:var(--orange);stroke-width:16;fill:var(--plan-cur);stroke-dasharray:22 12;animation:march 1s linear infinite}
 .blk.done .blk-r{fill:var(--plan-done)}
 .blk.done text{opacity:.5}
+.pl-void{fill:var(--plan-desk);stroke:var(--plan-desk);stroke-linejoin:round}
+.pl-gap{fill:var(--plan-bg)}
+.pl-jamb{stroke:var(--plan-ink);stroke-width:7;stroke-linecap:round}
+.pl-ehit{fill:transparent}
+.pl-elab rect{fill:var(--orange)}
+.pl-elab text{fill:var(--on-orange);font-family:var(--font-display);font-weight:900;font-stretch:80%;letter-spacing:1px}
+.pl-entry.sel .pl-elab rect{stroke:var(--plan-ink);stroke-width:5}
+.snap-l{stroke:var(--orange);stroke-width:3;stroke-dasharray:10 8;fill:none}
+.snap-p{fill:none;stroke:var(--orange);stroke-width:5}
 .zn-r{fill:var(--plan-zone);stroke:var(--plan-ink);stroke-width:4;stroke-dasharray:3 11;stroke-linecap:round}
 .zn text{fill:var(--plan-zone-ink);font-family:var(--font-display);font-weight:800;font-stretch:80%;letter-spacing:2px}
 .zn.sel .zn-r{stroke:var(--orange);stroke-width:9;stroke-dasharray:none}
@@ -292,7 +301,7 @@ const IC={
   check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   edit:'<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/>',play:'<path d="M7 4.5v15l12-7.5z"/>',
   fit:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',chevd:'<path d="M6 9l6 6 6-6"/>',
-  prev:'<path d="M15 6l-6 6 6 6"/>',next:'<path d="M9 6l6 6-6 6"/>',wall:'<path d="M4 20V4M4 4h16"/>',zone:'<rect x="3.5" y="5" width="17" height="14" rx="2" stroke-dasharray="3 3"/>',camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',ruler:'<path d="M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2"/>'};
+  prev:'<path d="M15 6l-6 6 6 6"/>',next:'<path d="M9 6l6 6-6 6"/>',wall:'<path d="M4 20V4M4 4h16"/>',zone:'<rect x="3.5" y="5" width="17" height="14" rx="2" stroke-dasharray="3 3"/>',camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',door:'<path d="M5 21V4h9v17M14 6l5 2v13M11 12h.01"/>',void:'<path d="M4 4h16v16H4z" fill="currentColor" fill-opacity=".35"/><path d="M4 4l16 16M12 4l8 8M4 12l8 8"/>',ruler:'<path d="M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2"/>'};
 const ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
 
 /* ============ état ============ */
@@ -423,6 +432,7 @@ function mapContent(M){
   const gym=getGym(M.gymId);if(!gym)return'';
   const W_=gym.w*U,H_=gym.h*U,sel=M.mode==='edit'?ui.sel:null;
   let s=`<rect class="pl-floor" width="${W_}" height="${H_}"/><rect width="${W_}" height="${H_}" fill="url(#g1${M.uid})"/><rect width="${W_}" height="${H_}" fill="url(#g5${M.uid})"/>`;
+  const vd=voidPath(gym);if(vd)s+=`<path class="pl-void" d="${vd}" stroke-width="${(Math.max(0.05,Math.max(gym.w,gym.h)/600)*4*U).toFixed(1)}"/>`;
   const cur=M.mode==='session'&&A?A.items[A.cur]:null;
   const keyOf=id=>{const b=getItem(gym,id);return b?b.kind+':'+mkey(b.name):null},curKey=cur&&!cur.done?keyOf(cur.machineId):null;
   const state=b=>{if(M.mode!=='session'||!A)return'';const k=b.kind+':'+mkey(b.name),its=A.items.filter(x=>keyOf(x.machineId)===k);return curKey===k?' cur':its.length&&its.every(x=>x.done)?' done':''};
@@ -437,11 +447,20 @@ function mapContent(M){
       (M.mode==='edit'?`<line class="pl-hit" x1="${w.x1*U}" y1="${w.y1*U}" x2="${w.x2*U}" y2="${w.y2*U}"/>`:'')+
       (sel===w.id?handle(w.x1,w.y1,'p1')+handle(w.x2,w.y2,'p2'):'')+`</g>`;
   }
+  for(const e of entriesOf(gym)){
+    const w=(e.w||1.6)*U;
+    s+=`<g class="pl-entry${sel===e.id?' sel':''}" data-id="${e.id}" transform="translate(${e.x*U},${e.y*U})"><g transform="rotate(${e.ang||0})"><rect class="pl-gap" x="${-w/2}" y="-13" width="${w}" height="26"/><line class="pl-jamb" x1="${-w/2}" y1="-24" x2="${-w/2}" y2="24"/><line class="pl-jamb" x1="${w/2}" y1="-24" x2="${w/2}" y2="24"/><rect class="pl-ehit" x="${-w/2-20}" y="-60" width="${w+40}" height="120"/></g>`+
+      `<g class="pl-elab"><rect x="-64" y="-64" width="128" height="36" rx="18"/><text text-anchor="middle" y="-39" font-size="21">ENTRÉE</text></g></g>`;
+  }
   for(const m of machinesOf(gym)){
     let cls='blk'+state(m);
     if(sel===m.id)cls+=' sel';
     s+=`<g class="${cls}" data-id="${m.id}" transform="translate(${m.x*U},${m.y*U})"><g class="blk-in"><rect class="blk-r" width="${m.w*U}" height="${m.h*U}" rx="8"/>${blockText(m)}</g>`+
       (sel===m.id?handle(m.w,m.h,'rs'):'')+`</g>`;
+  }
+  if(ui.hint&&M.mode==='edit'){
+    for(const l of ui.hint.lines||[])s+=`<line class="snap-l" x1="${l[0]*U}" y1="${l[1]*U}" x2="${l[2]*U}" y2="${l[3]*U}"/>`;
+    for(const q of ui.hint.pts||[])s+=`<circle class="snap-p" cx="${q[0]*U}" cy="${q[1]*U}" r="20"/>`;
   }
   if(ui.draft&&M.mode==='edit'){
     const d=ui.draft,L=Math.hypot(d.b.x-d.a.x,d.b.y-d.a.y);
@@ -461,7 +480,7 @@ function mountMap(host,gymId,mode,key){
     <pattern id="g5${M.uid}" width="500" height="500" patternUnits="userSpaceOnUse"><path class="pl-g5" d="M500 0H0V500"/></pattern></defs>
     <g class="mc"></g></svg>
     <button class="map-fit" data-act="fitMap" data-k="${key}" aria-label="Voir toute la salle">${ic('fit')}</button>
-    ${mode==='edit'&&ui.tool==='wall'?`<div class="map-hint"><span>Glisse ton doigt pour tracer un mur</span></div>`:''}`;
+    ${mode==='edit'&&ui.tool==='wall'?`<div class="map-hint"><span>Glisse pour tracer un mur : il s'accroche aux autres murs</span></div>`:mode==='edit'&&ui.tool==='void'?`<div class="map-hint"><span>Touche un espace entre des murs pour le passer en vide</span></div>`:''}`;
   M.svg=host.querySelector('svg');M.g=M.svg.querySelector('.mc');
   const vk=`${key}:${gymId}:${gym.w}x${gym.h}`;
   if(!ui.vb[vk])ui.vb[vk]=fitVB(gym);
@@ -481,27 +500,178 @@ function zoomTo(M,nw,anchor,cx,cy){
   M.vb.h*=nw/M.vb.w;M.vb.w=nw;applyVB(M);
   const now=toSvg(M,cx,cy);M.vb.x+=anchor.x-now.x;M.vb.y+=anchor.y-now.y;applyVB(M);
 }
+/* ============ plan : aimantation des murs et des blocs ============ */
+const wallsOf=g=>(g?.items||[]).filter(i=>i.kind==='wall');
+const entriesOf=g=>(g?.items||[]).filter(i=>i.kind==='entry');
+function projSeg(p,w){
+  const dx=w.x2-w.x1,dy=w.y2-w.y1,t=clamp(((p.x-w.x1)*dx+(p.y-w.y1)*dy)/(dx*dx+dy*dy||1e-9),0,1),x=w.x1+t*dx,y=w.y1+t*dy;
+  return{x,y,t,d:Math.hypot(p.x-x,p.y-y)};
+}
+const outlineOf=g=>g.outer===false?[]:[{x1:0,y1:0,x2:g.w,y2:0},{x1:g.w,y1:0,x2:g.w,y2:g.h},{x1:0,y1:g.h,x2:g.w,y2:g.h},{x1:0,y1:0,x2:0,y2:g.h}];
+// Rayon d'aimantation : environ 24 px à l'écran, quel que soit le zoom.
+function snapRad(M){try{return clamp(24/(M.svg.getScreenCTM().a*U),0.15,1.5)}catch(e){return 0.4}}
+// Aimante un point, par ordre de priorité : bout de mur, point sur un mur, angle de 45° depuis le départ,
+// alignement avec un autre bout de mur, puis grille de 25 cm.
+function snapPoint(M,p,exclude,from){
+  const gym=getGym(M.gymId),rad=snapRad(M),walls=wallsOf(gym).filter(w=>w.id!==exclude),lines=walls.concat(outlineOf(gym));
+  const ends=walls.flatMap(w=>[[w.x1,w.y1],[w.x2,w.y2]]).concat(gym.outer===false?[]:[[0,0],[gym.w,0],[gym.w,gym.h],[0,gym.h]]);
+  let best=null;
+  for(const q of ends){const d=Math.hypot(q[0]-p.x,q[1]-p.y);if(d<rad&&(!best||d<best.d))best={x:q[0],y:q[1],d}}
+  if(best)return{x:best.x,y:best.y,mark:true,guides:[]};
+  for(const w of lines){const r=projSeg(p,w);if(r.d<rad*0.8&&(!best||r.d<best.d))best=r}
+  if(best)return{x:best.x,y:best.y,mark:true,guides:[]};
+  let x=p.x,y=p.y,dir=null;const guides=[];
+  if(from){
+    const dx=x-from.x,dy=y-from.y,L=Math.round(Math.hypot(dx,dy)*4)/4;
+    if(L>0){const a=Math.atan2(dy,dx),s=Math.round(a/(Math.PI/4))*Math.PI/4;if(Math.abs(a-s)<0.2){dir=s;x=from.x+Math.cos(s)*L;y=from.y+Math.sin(s)*L}}
+  }
+  let ax=null,ay=null;
+  for(const q of ends){
+    if(Math.abs(q[0]-x)<rad*0.7&&(!ax||Math.abs(q[0]-x)<Math.abs(ax[0]-x)))ax=q;
+    if(Math.abs(q[1]-y)<rad*0.7&&(!ay||Math.abs(q[1]-y)<Math.abs(ay[1]-y)))ay=q;
+  }
+  const hor=dir!=null&&Math.abs(Math.sin(dir))<1e-6,ver=dir!=null&&Math.abs(Math.cos(dir))<1e-6;
+  if(dir==null){if(ax){x=ax[0];guides.push(ax)}else x=snap(x);if(ay){y=ay[1];guides.push(ay)}else y=snap(y)}
+  else if(hor){if(ax){x=ax[0];guides.push(ax)}}
+  else if(ver){if(ay){y=ay[1];guides.push(ay)}}
+  else if(ax){x=ax[0];y=from.y+Math.tan(dir)*(ax[0]-from.x);guides.push(ax)}
+  else if(ay){y=ay[1];x=from.x+(ay[1]-from.y)/Math.tan(dir);guides.push(ay)}
+  return{x:clamp(x,0,gym.w),y:clamp(y,0,gym.h),mark:false,guides};
+}
+// Bords d'un bloc (machine, zone) aimantés sur les bords des autres blocs, les murs droits et le contour.
+function snapBlock(M,it,x,y){
+  const gym=getGym(M.gymId),rad=snapRad(M)*0.8,xs=[0,gym.w],ys=[0,gym.h];
+  for(const o of gym.items){
+    if(o.id===it.id)continue;
+    if(o.kind==='machine'||o.kind==='zone'){xs.push(o.x,o.x+o.w);ys.push(o.y,o.y+o.h)}
+    else if(o.kind==='wall'){if(Math.abs(o.x1-o.x2)<0.01)xs.push(o.x1-0.07,o.x1+0.07);if(Math.abs(o.y1-o.y2)<0.01)ys.push(o.y1-0.07,o.y1+0.07)}
+  }
+  const pick=(v,w,list)=>{let b=null;for(const c of list)for(const off of[0,w]){const d=c-(v+off);if(Math.abs(d)<rad&&(!b||Math.abs(d)<Math.abs(b.d)))b={d,c}}return b};
+  const bx=pick(x,it.w,xs),by=pick(y,it.h,ys);
+  return{x:bx?x+bx.d:snap(x),y:by?y+by.d:snap(y),lines:[...(bx?[[bx.c,0,bx.c,gym.h]]:[]),...(by?[[0,by.c,gym.w,by.c]]:[])]};
+}
+// Les bouts de murs très proches sont raccordés au même point.
+function joinEnds(gym,tol){
+  const ws=wallsOf(gym),pts=ws.flatMap(w=>[[w,1],[w,2]]);
+  for(let i=0;i<pts.length;i++)for(let j=i+1;j<pts.length;j++){
+    const[a,ka]=pts[i],[b,kb]=pts[j];if(a===b)continue;
+    if(Math.hypot(a['x'+ka]-b['x'+kb],a['y'+ka]-b['y'+kb])<=tol){b['x'+kb]=a['x'+ka];b['y'+kb]=a['y'+ka]}
+  }
+}
+// Pose l'entrée sur le mur le plus proche, dans son axe.
+function seatEntry(gym,e,p,rad){
+  let best=null;
+  for(const w of wallsOf(gym).concat(outlineOf(gym))){const r=projSeg(p,w);if(r.d<rad&&(!best||r.d<best.d))best={...r,w}}
+  if(best){e.x=best.x;e.y=best.y;e.ang=Math.round(Math.atan2(best.w.y2-best.w.y1,best.w.x2-best.w.x1)*180/Math.PI)}
+  else{e.x=clamp(p.x,0,gym.w);e.y=clamp(p.y,0,gym.h)}
+}
+function entrySeg(e){const a=(e.ang||0)*Math.PI/180,h=(e.w||1.6)/2;return[e.x-Math.cos(a)*h,e.y-Math.sin(a)*h,e.x+Math.cos(a)*h,e.y+Math.sin(a)*h]}
+
+/* ============ plan : vide extérieur ============ */
+// Le plan est découpé en cases de 5 cm. Le vide part du bord (salle non rectangulaire) ou d'un point touché
+// avec l'outil « Vide », et s'étend jusqu'aux murs. Les ouvertures de moins de 1,6 m (portes, entrée) le retiennent.
+const VOID_R=0.8,_vg=new Map(),_vd=new Map();
+function voidGrid(gym){
+  const ws=wallsOf(gym).map(w=>[w.x1,w.y1,w.x2,w.y2]),es=entriesOf(gym).map(entrySeg),key=JSON.stringify([gym.w,gym.h,ws,es]);
+  if(_vg.has(key))return _vg.get(key);
+  const c=Math.max(0.05,Math.max(gym.w,gym.h)/600),nx=Math.max(1,Math.ceil(gym.w/c)),ny=Math.max(1,Math.ceil(gym.h/c));
+  const thick=new Uint8Array(nx*ny),thin=new Uint8Array(nx*ny),tw=0.06+c;
+  const mark=(s,R,arr)=>{
+    const w={x1:s[0],y1:s[1],x2:s[2],y2:s[3]},i0=Math.max(0,Math.floor((Math.min(s[0],s[2])-R)/c)),i1=Math.min(nx-1,Math.ceil((Math.max(s[0],s[2])+R)/c));
+    const j0=Math.max(0,Math.floor((Math.min(s[1],s[3])-R)/c)),j1=Math.min(ny-1,Math.ceil((Math.max(s[1],s[3])+R)/c));
+    for(let j=j0;j<=j1;j++)for(let i=i0;i<=i1;i++)if(projSeg({x:(i+0.5)*c,y:(j+0.5)*c},w).d<=R)arr[j*nx+i]=1;
+  };
+  // ouvertures jusqu'à 3 m entre deux murs alignés (portes, sorties) : fermées pour le calcul du vide
+  const gaps=[];
+  for(let i=0;i<ws.length;i++)for(let j=i+1;j<ws.length;j++)for(const ka of[0,2])for(const kb of[0,2]){
+    const A=ws[i],B=ws[j],ax=A[ka],ay=A[ka+1],bx=B[kb],by=B[kb+1],gx=bx-ax,gy=by-ay,gl=Math.hypot(gx,gy);
+    if(gl<0.05||gl>3)continue;
+    const ua=[ax-A[2-ka],ay-A[3-ka]],ub=[bx-B[2-kb],by-B[3-kb]],la=Math.hypot(...ua)||1,lb=Math.hypot(...ub)||1;
+    if((ua[0]*gx+ua[1]*gy)/(la*gl)>0.97&&-(ub[0]*gx+ub[1]*gy)/(lb*gl)>0.97)gaps.push([ax,ay,bx,by]);
+  }
+  for(const s of ws.concat(es,gaps)){mark(s,VOID_R,thick);mark(s,tw,thin)}
+  const G={c,nx,ny,thick,thin,key};
+  if(_vg.size>8)_vg.clear();_vg.set(key,G);return G;
+}
+function flood(G,starts){
+  const{nx,ny,thick}=G,reg=new Uint8Array(nx*ny),q=new Int32Array(nx*ny);let h=0,t=0;
+  const push=i=>{if(i>=0&&!reg[i]&&!thick[i]){reg[i]=1;q[t++]=i}};
+  starts.forEach(push);
+  while(h<t){const i=q[h++],x=i%nx;if(x>0)push(i-1);if(x<nx-1)push(i+1);if(i>=nx)push(i-nx);if(i<nx*(ny-1))push(i+nx)}
+  return{reg,n:t};
+}
+const borderCells=G=>{const a=[];for(let x=0;x<G.nx;x++)a.push(x,(G.ny-1)*G.nx+x);for(let y=0;y<G.ny;y++)a.push(y*G.nx,y*G.nx+G.nx-1);return a};
+function freeCell(G,p){
+  const i0=clamp(Math.floor(p.x/G.c),0,G.nx-1),j0=clamp(Math.floor(p.y/G.c),0,G.ny-1),R=Math.ceil(2*VOID_R/G.c);
+  for(let r=0;r<=R;r++)for(let j=j0-r;j<=j0+r;j++)for(let i=i0-r;i<=i0+r;i++){
+    if(i<0||j<0||i>=G.nx||j>=G.ny||(Math.abs(i-i0)!==r&&Math.abs(j-j0)!==r))continue;if(!G.thick[j*G.nx+i])return j*G.nx+i;
+  }
+  return-1;
+}
+const freeCount=G=>{let n=0;for(let i=0;i<G.thick.length;i++)if(!G.thick[i])n++;return n};
+function voidPath(gym){
+  const seeds=gym.voids||[],auto=gym.outer===false;
+  if(!auto&&!seeds.length)return'';
+  const G=voidGrid(gym),key=G.key+JSON.stringify([auto,seeds]);
+  if(_vd.has(key))return _vd.get(key);
+  const{c,nx,ny,thin}=G,free=freeCount(G),reg=new Uint8Array(nx*ny),add=r=>{for(let i=0;i<reg.length;i++)if(r.reg[i])reg[i]=1};
+  // contour ouvert : si l'extérieur ne laisse pas au moins 4 m² de salle, on ne l'affiche pas
+  if(auto){const ext=flood(G,borderCells(G));if((free-ext.n)*c*c>=4)add(ext)}
+  for(const s of seeds){const k=freeCell(G,s);if(k<0)continue;const r=flood(G,[k]);if(r.n<=free*0.75)add(r)}
+  // le vide avance jusqu'aux murs (distance de chanfrein, arrêtée par les murs)
+  const INF=1e9,d=new Float32Array(nx*ny).fill(INF);
+  for(let i=0;i<reg.length;i++)if(reg[i])d[i]=0;
+  const relax=(i,j,w)=>{if(!thin[j]&&d[i]+w<d[j])d[j]=d[i]+w};
+  for(let y=0;y<ny;y++)for(let x=0;x<nx;x++){const i=y*nx+x;if(thin[i])continue;if(x>0){relax(i-1,i,3);if(y>0)relax(i-nx-1,i,4)}if(y>0){relax(i-nx,i,3);if(x<nx-1)relax(i-nx+1,i,4)}}
+  for(let y=ny-1;y>=0;y--)for(let x=nx-1;x>=0;x--){const i=y*nx+x;if(thin[i])continue;if(x<nx-1){relax(i+1,i,3);if(y<ny-1)relax(i+nx+1,i,4)}if(y<ny-1){relax(i+nx,i,3);if(x>0)relax(i+nx-1,i,4)}}
+  const lim=3*(VOID_R/c+1);let out='';const open=new Map();
+  // cases de vide regroupées en rectangles (lignes identiques fusionnées)
+  const flush=(k,r)=>{out+=`M${(r.x0*c*U).toFixed(1)} ${(r.y0*c*U).toFixed(1)}h${((r.x1-r.x0)*c*U).toFixed(1)}v${((r.y1-r.y0)*c*U).toFixed(1)}h${(-(r.x1-r.x0)*c*U).toFixed(1)}z`;open.delete(k)};
+  for(let y=0;y<=ny;y++){
+    const runs=new Set();
+    if(y<ny)for(let x=0;x<nx;){if(d[y*nx+x]<=lim){let e=x;while(e<nx&&d[y*nx+e]<=lim)e++;runs.add(x+':'+e);x=e}else x++}
+    for(const[k,r]of[...open])if(!runs.has(k))flush(k,r);else r.y1=y+1;
+    for(const k of runs)if(!open.has(k)){const[x0,x1]=k.split(':').map(Number);open.set(k,{x0,x1,y0:y,y1:y+1})}
+  }
+  if(_vd.size>8)_vd.clear();_vd.set(key,out);return out;
+}
+// Outil « Vide » : touche un espace fermé par des murs pour le passer en vide, ou le remettre en salle.
+function toggleVoid(M,p){
+  const gym=getGym(M.gymId),G=voidGrid(gym),k=freeCell(G,p);
+  if(k<0){toast('Touche un espace plus large, entre des murs');return}
+  const comp=flood(G,[k]),seeds=gym.voids||[],hit=seeds.filter(s=>{const c=freeCell(G,s);return c>=0&&comp.reg[c]});
+  if(hit.length){gym.voids=seeds.filter(s=>!hit.includes(s));toast('Espace remis dans la salle')}
+  else{
+    if(comp.n>freeCount(G)*0.75){toast("Cet espace n'est pas fermé par des murs");return}
+    if(gym.outer===false&&flood(G,borderCells(G)).reg[k]){toast("C'est déjà l'extérieur de la salle");return}
+    gym.voids=seeds.concat([{x:Math.round(p.x*100)/100,y:Math.round(p.y*100)/100}]);toast('Espace passé en vide');
+  }
+  Store.saveMain();drawMap(M);
+}
+
 function wireMap(M){
   const svg=M.svg,P=new Map();let G=null;
+  const hint=(pts,lines)=>{ui.hint={pts,lines}};
   svg.addEventListener('pointerdown',e=>{
     if(e.button>0)return;
     try{svg.setPointerCapture(e.pointerId)}catch(_){}
     P.set(e.pointerId,{x:e.clientX,y:e.clientY});
     if(P.size===2){
       if(G&&G.moved&&G.type!=='pan'&&G.type!=='draw')commitEdit();
-      if(G&&G.type==='draw'){ui.draft=null;queueDraw(M)}
+      if(G&&G.type==='draw'){ui.draft=null;ui.hint=null;queueDraw(M)}
       const[a,b]=[...P.values()],mid={x:(a.x+b.x)/2,y:(a.y+b.y)/2};
       G={type:'pinch',d0:Math.hypot(a.x-b.x,a.y-b.y)||1,w0:M.vb.w,anchor:toSvg(M,mid.x,mid.y)};return;
     }
     if(P.size>2)return;
     const tgt=e.target.closest('[data-h],[data-id]'),inv=svg.getScreenCTM().inverse();
     G={type:'pan',id:e.pointerId,sx:e.clientX,sy:e.clientY,inv,vb0:{...M.vb},s0:toSvg(M,e.clientX,e.clientY,inv),tgt,moved:false};
-    if(M.mode!=='edit')return;
-    const gym=getGym(M.gymId),r0=toRoom(M,e.clientX,e.clientY);G.r0=r0;
-    if(ui.tool==='wall'){G.type='draw';const p={x:clamp(snap(r0.x),0,gym.w),y:clamp(snap(r0.y),0,gym.h)};ui.draft={a:p,b:{...p}};return}
+    const r0=toRoom(M,e.clientX,e.clientY);G.r0=r0;
+    if(M.mode!=='edit'||ui.tool==='void')return;
+    const gym=getGym(M.gymId);
+    if(ui.tool==='wall'){G.type='draw';const a=snapPoint(M,r0,null,null);ui.draft={a:{x:a.x,y:a.y},b:{x:a.x,y:a.y}};hint(a.mark?[[a.x,a.y]]:[],[]);return}
     const h=tgt?.dataset?.h,id=tgt?.closest('[data-id]')?.dataset.id,it=id?getItem(gym,id):null;
     if(h&&it){G.type='handle';G.h=h;G.itemId=id;G.orig=clone(it);return}
-    if(it&&(it.kind==='machine'||ui.sel===id)){G.type='move';G.itemId=id;G.orig=clone(it)}
+    if(it&&(it.kind==='machine'||it.kind==='entry'||ui.sel===id)){G.type='move';G.itemId=id;G.orig=clone(it)}
   });
   svg.addEventListener('pointermove',e=>{
     if(!P.has(e.pointerId))return;
@@ -515,18 +685,25 @@ function wireMap(M){
     if(G.type==='pan'){const p=toSvg(M,e.clientX,e.clientY,G.inv);M.vb.x=G.vb0.x-(p.x-G.s0.x);M.vb.y=G.vb0.y-(p.y-G.s0.y);applyVB(M);return}
     const gym=getGym(M.gymId),r=toRoom(M,e.clientX,e.clientY);
     if(G.type==='draw'){
-      const a=ui.draft.a;let b={x:snap(r.x),y:snap(r.y)};
-      const dx=Math.abs(b.x-a.x),dy=Math.abs(b.y-a.y);if(dy<dx*0.18)b.y=a.y;else if(dx<dy*0.18)b.x=a.x;
-      ui.draft.b={x:clamp(b.x,0,gym.w),y:clamp(b.y,0,gym.h)};queueDraw(M);return;
+      const a=ui.draft.a,b=snapPoint(M,r,null,a);ui.draft.b={x:b.x,y:b.y};
+      hint([...(b.mark?[[b.x,b.y]]:[])],b.guides.map(q=>[q[0],q[1],b.x,b.y]));queueDraw(M);return;
     }
     const it=getItem(gym,G.itemId);if(!it)return;
     const dx=r.x-G.r0.x,dy=r.y-G.r0.y,o=G.orig;
     if(G.type==='move'){
-      if(it.kind==='wall'){const sx=snap(o.x1+dx)-o.x1,sy=snap(o.y1+dy)-o.y1;it.x1=o.x1+sx;it.y1=o.y1+sy;it.x2=o.x2+sx;it.y2=o.y2+sy}
-      else{it.x=clamp(snap(o.x+dx),0,Math.max(0,gym.w-it.w));it.y=clamp(snap(o.y+dy),0,Math.max(0,gym.h-it.h))}
+      if(it.kind==='wall'){
+        // un mur déplacé vient se coller par un de ses bouts sur le bout d'un autre mur
+        const rad=snapRad(M);let bx=snap(o.x1+dx)-o.x1,by=snap(o.y1+dy)-o.y1,bd=rad,mk=[];
+        for(const w of wallsOf(gym))if(w.id!==it.id)for(const q of[[w.x1,w.y1],[w.x2,w.y2]])for(const p of[[o.x1,o.y1],[o.x2,o.y2]]){
+          const ex=q[0]-(p[0]+dx),ey=q[1]-(p[1]+dy),d=Math.hypot(ex,ey);if(d<bd){bd=d;bx=dx+ex;by=dy+ey;mk=[q]}}
+        it.x1=o.x1+bx;it.y1=o.y1+by;it.x2=o.x2+bx;it.y2=o.y2+by;hint(mk,[]);
+      }else if(it.kind==='entry'){seatEntry(gym,it,{x:o.x+dx,y:o.y+dy},snapRad(M)*3)}
+      else{const s=snapBlock(M,it,o.x+dx,o.y+dy);it.x=clamp(s.x,0,Math.max(0,gym.w-it.w));it.y=clamp(s.y,0,Math.max(0,gym.h-it.h));hint([],s.lines)}
     }else if(G.h==='rs'){it.w=clamp(snap(o.w+dx),0.5,gym.w-it.x);it.h=clamp(snap(o.h+dy),0.5,gym.h-it.y)}
-    else if(G.h==='p1'){it.x1=snap(o.x1+dx);it.y1=snap(o.y1+dy)}
-    else{it.x2=snap(o.x2+dx);it.y2=snap(o.y2+dy)}
+    else{
+      const k=G.h==='p1'?1:2,f=k===1?2:1,s=snapPoint(M,{x:o['x'+k]+dx,y:o['y'+k]+dy},it.id,{x:o['x'+f],y:o['y'+f]});
+      it['x'+k]=s.x;it['y'+k]=s.y;hint(s.mark?[[s.x,s.y]]:[],s.guides.map(q=>[q[0],q[1],s.x,s.y]));
+    }
     queueDraw(M);
   });
   const end=e=>{
@@ -537,9 +714,9 @@ function wireMap(M){
       else if(!P.size)G=null;return;
     }
     if(e.pointerId!==G.id)return;
-    const g=G;G=null;
+    const g=G;G=null;ui.hint=null;
     if(g.type==='draw'){const d=ui.draft;ui.draft=null;if(e.type!=='pointercancel'&&d)finishWall(M,d);else queueDraw(M);return}
-    if(!g.moved){if(e.type!=='pointercancel')mapTap(M,g.tgt);return}
+    if(!g.moved){if(e.type!=='pointercancel')mapTap(M,g.tgt,g.r0);return}
     if(g.type==='move'||g.type==='handle')commitEdit();
   };
   svg.addEventListener('pointerup',end);svg.addEventListener('pointercancel',end);
@@ -548,16 +725,17 @@ function wireMap(M){
 function commitEdit(){
   const gym=curGym();
   for(const it of gym.items)if(it.kind==='wall'){it.x1=clamp(it.x1,0,gym.w);it.x2=clamp(it.x2,0,gym.w);it.y1=clamp(it.y1,0,gym.h);it.y2=clamp(it.y2,0,gym.h)}
-  Store.saveMain();render();
+  joinEnds(gym,0.12);Store.saveMain();render();
 }
 function finishWall(M,d){
   if(Math.hypot(d.b.x-d.a.x,d.b.y-d.a.y)<0.3){drawMap(M);return}
-  const w={id:uid('w'),kind:'wall',x1:d.a.x,y1:d.a.y,x2:d.b.x,y2:d.b.y};
-  curGym().items.push(w);Store.saveMain();render();
+  const gym=curGym(),w={id:uid('w'),kind:'wall',x1:d.a.x,y1:d.a.y,x2:d.b.x,y2:d.b.y};
+  gym.items.push(w);joinEnds(gym,0.12);Store.saveMain();render();
 }
-function mapTap(M,tgt){
+function mapTap(M,tgt,p){
   const id=tgt?.closest?.('[data-id]')?.dataset.id,gym=getGym(M.gymId),it=id?getItem(gym,id):null;
   if(M.mode==='edit'){
+    if(ui.tool==='void'){if(p)toggleVoid(M,p);return}
     if(it&&ui.sel===id&&it.kind==='machine'){openMachine(gym.id,id);return}
     if(it&&ui.sel===id&&it.kind==='zone'){openZone(gym.id,id);return}
     ui.sel=it?id:null;drawMap(M);renderInspector();return;
@@ -591,7 +769,7 @@ function renderSalle(main){
   let h=`<div class="sv-bar gut"><div class="row" style="flex-wrap:nowrap"><button class="gym-pick grow" data-act="openGyms"><span class="grow"><span class="eyebrow">${S.gyms.length>1?`Salle · ${S.gyms.length} enregistrées`:'Salle'}</span><span class="h2">${esc(gym.name)}</span></span>${ic('chevd')}</button>`;
   h+=ui.edit?`<button class="btn sm" data-act="editDone">${ic('check')} Terminé</button>`:`<button class="btn sm dark" data-act="editStart">${ic('edit')} Modifier</button>`;
   h+=`</div>`;
-  if(ui.edit)h+=`<div class="tools"><button class="tool go" data-act="addMachine">${ic('plus')}Machine</button><button class="tool go" data-act="addZone">${ic('zone')}Zone</button><button class="tool${ui.tool==='wall'?' on':''}" data-act="toolWall">${ic('wall')}Mur</button><button class="tool" data-act="phOpen">${ic('camera')}Photo du plan</button><button class="tool" data-act="gymSettings">${ic('ruler')}Nom et taille</button></div>`;
+  if(ui.edit)h+=`<div class="tools"><button class="tool go" data-act="addMachine">${ic('plus')}Machine</button><button class="tool go" data-act="addZone">${ic('zone')}Zone</button><button class="tool${ui.tool==='wall'?' on':''}" data-act="toolWall">${ic('wall')}Mur</button><button class="tool" data-act="addEntry">${ic('door')}Entrée</button><button class="tool${ui.tool==='void'?' on':''}" data-act="toolVoid">${ic('void')}Vide</button><button class="tool" data-act="phOpen">${ic('camera')}Photo du plan</button><button class="tool" data-act="gymSettings">${ic('ruler')}Nom et taille</button></div>`;
   h+=`</div><div class="maphost" id="mapHost"></div>${ui.edit?'<div class="insp gut" id="insp"></div>':''}`;
   main.innerHTML=h;
   mountMap($('#mapHost'),gym.id,ui.edit?'edit':'view','salle');
@@ -600,10 +778,10 @@ function renderSalle(main){
 function renderInspector(){
   const el=$('#insp');if(!el)return;
   const gym=curGym(),it=ui.sel?getItem(gym,ui.sel):null;
-  if(!it){el.innerHTML=`<span class="grow small muted">${ui.tool==='wall'?'Trace les murs intérieurs en glissant le doigt.':machinesOf(gym).length||zonesOf(gym).length?'Glisse une machine pour la déplacer. Touche une zone pour la sélectionner, puis glisse-la.':'Ajoute tes machines avec « + Machine » et tes zones avec « + Zone ».'}</span>`;return}
+  if(!it){el.innerHTML=`<span class="grow small muted">${ui.tool==='wall'?'Les murs s\'accrochent aux bouts et aux autres murs, et s\'alignent tout seuls.':ui.tool==='void'?'Touche un espace fermé par des murs : il passe en vide. Touche-le à nouveau pour l\'annuler.':machinesOf(gym).length||zonesOf(gym).length?'Glisse une machine pour la déplacer. Touche une zone pour la sélectionner, puis glisse-la.':'Ajoute tes machines avec « + Machine » et tes zones avec « + Zone ».'}</span>`;return}
   const nx=it.kind==='zone'?zoneOf(it).exos.length:0;
-  el.innerHTML=`<div class="grow"><div class="t">${it.kind==='wall'?'Mur':esc(it.name)}</div><div class="small muted">${it.kind==='zone'?`Zone · ${nx} exercice${nx>1?'s':''} · touche-la pour les gérer`:it.kind==='machine'?'Glisse le rond orange pour changer la taille':'Glisse les ronds orange pour l\'ajuster'}</div></div>`+
-    (it.kind!=='wall'?`<button class="ib" data-act="itEdit" aria-label="Modifier">${ic('edit')}</button>`:'')+
+  el.innerHTML=`<div class="grow"><div class="t">${it.kind==='wall'?'Mur':it.kind==='entry'?'Entrée':esc(it.name)}</div><div class="small muted">${it.kind==='zone'?`Zone · ${nx} exercice${nx>1?'s':''} · touche-la pour les gérer`:it.kind==='machine'?'Glisse le rond orange pour changer la taille':it.kind==='entry'?'Glisse-la le long d\'un mur':'Glisse les ronds orange pour l\'ajuster'}</div></div>`+
+    (it.kind==='machine'||it.kind==='zone'?`<button class="ib" data-act="itEdit" aria-label="Modifier">${ic('edit')}</button>`:'')+
     `<button class="ib" data-act="itDel" aria-label="Supprimer" style="color:var(--danger)">${ic('trash')}</button>`;
 }
 
@@ -832,7 +1010,8 @@ function openNewGym(){
 function openGymSettings(){
   const gym=curGym();
   pushSheet(()=>({eyebrow:'Salle',title:esc(gym.name),body:`<label class="field"><span>Nom</span><input class="inp" id="gsName" data-in="gsName" value="${esc(gym.name)}"></label>
-    <div class="row"><label class="field grow"><span>Largeur (m)</span><input class="inp" id="gsW" data-in="gsDim" data-k="w" inputmode="decimal" value="${fmt(gym.w)}"></label><label class="field grow"><span>Profondeur (m)</span><input class="inp" id="gsH" data-in="gsDim" data-k="h" inputmode="decimal" value="${fmt(gym.h)}"></label></div>`,
+    <div class="row"><label class="field grow"><span>Largeur (m)</span><input class="inp" id="gsW" data-in="gsDim" data-k="w" inputmode="decimal" value="${fmt(gym.w)}"></label><label class="field grow"><span>Profondeur (m)</span><input class="inp" id="gsH" data-in="gsDim" data-k="h" inputmode="decimal" value="${fmt(gym.h)}"></label></div>
+    <button class="pick${gym.outer!==false?' on':''}" data-act="togOuter"><span class="ck">${gym.outer!==false?ic('check'):''}</span><span class="grow"><b>Salle rectangulaire</b><br><span class="small muted">${gym.outer!==false?'Le contour est un rectangle tracé automatiquement.':'Le contour vient de tes murs ; l\'extérieur est en vide.'}</span></span></button>`,
     foot:`<button class="btn danger" data-act="delGym">${ic('trash')} Supprimer la salle</button><button class="btn" data-act="closeSheet">OK</button>`}));
 }
 
@@ -1165,6 +1344,14 @@ const ACT={
   editStart:()=>{ui.edit=true;ui.tool='select';ui.sel=null;render()},
   editDone:()=>{ui.edit=false;ui.sel=null;ui.draft=null;ui.tool='select';render()},
   toolWall:()=>{ui.tool=ui.tool==='wall'?'select':'wall';ui.sel=null;render()},
+  toolVoid:()=>{ui.tool=ui.tool==='void'?'select':'void';ui.sel=null;render()},
+  addEntry:()=>{
+    const gym=curGym(),M=maps.salle;let c={x:gym.w/2,y:gym.h};
+    if(M&&M.svg.isConnected){const r=M.svg.getBoundingClientRect();c=toRoom(M,r.left+r.width/2,r.top+r.height/2)}
+    const e={id:uid('e'),kind:'entry',x:c.x,y:c.y,w:1.6,ang:0};seatEntry(gym,e,c,Math.max(gym.w,gym.h));
+    gym.items.push(e);ui.sel=e.id;ui.tool='select';Store.saveMain();render();toast("Glisse l'entrée le long des murs");
+  },
+  togOuter:()=>{const g=curGym();g.outer=g.outer===false;Store.saveMain();refreshSheet()},
   addMachine:()=>{ui.tool='select';openMachine(curGym().id,null)},
   itEdit:()=>{const g=curGym(),it=getItem(g,ui.sel);if(it?.kind==='zone')openZone(g.id,ui.sel);else openMachine(g.id,ui.sel)},
   addZone:()=>{ui.tool='select';openZone(curGym().id,null)},
@@ -1231,7 +1418,7 @@ const ACT={
   phApply:()=>{
     const g=getGym(PH.gymId);if(!g)return;
     g.w=PH.w;g.h=PH.h;g.outer=!!PH.isRect;
-    g.items=g.items.filter(i=>i.kind!=='wall').concat(PH.walls.map(w=>({id:uid('w'),kind:'wall',...w})));
+    g.items=g.items.filter(i=>i.kind!=='wall').concat(PH.walls.map(w=>({id:uid('w'),kind:'wall',...w})));joinEnds(g,0.3);
     for(const m of g.items)if(m.kind==='machine'||m.kind==='zone'){m.x=clamp(m.x,0,Math.max(0,g.w-m.w));m.y=clamp(m.y,0,Math.max(0,g.h-m.h))}
     const n=PH.walls.length;ui.sel=null;Store.saveMain();closeAllSheets();render();toast(`${n} mur${n>1?'s':''} placé${n>1?'s':''} : corrige ce qui ne va pas`);
   },
