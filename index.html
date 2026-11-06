@@ -207,8 +207,8 @@ svg.plan{width:100%;height:100%;display:block;touch-action:none;user-select:none
 .prow{background:var(--surface);border-radius:12px;padding:6px 6px 6px 14px}
 .prow-h{display:flex;align-items:center;gap:2px}
 .prow-h .t{font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.prow-h .btn{margin:0 2px 0 8px;padding:6px 10px;min-height:36px;font-size:13.5px;gap:5px}
-.prow-h .btn svg.i{width:16px;height:16px}
+.prow-h .btn.play{margin:0 2px 0 8px;padding:0;width:40px;min-height:40px;border-radius:10px}
+.prow-h .btn.play svg.i{width:18px;height:18px;fill:currentColor}
 .pdet{margin:4px 0 10px;padding:0 8px 0 0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:14px}
 .pdet li{display:flex;gap:8px}
 .pdet .m{width:96px;flex:none;color:var(--ink-3);font-weight:700;font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding-top:2px}
@@ -827,7 +827,7 @@ function viewSeances(){
   h+=`<div class="stack" style="gap:8px">`;
   for(const p of S.plans){
     const gym=getGym(p.gymId),open=ui.openPlan===p.id,ok=gym&&p.items.some(it=>itemInfo(gym,it));
-    h+=`<article class="prow"><div class="prow-h"><span class="grow t">${esc(p.name)}</span><button class="btn sm" data-act="startPlan" data-id="${p.id}"${ok?'':' disabled'}>${ic('play')} Lancer</button><button class="ib" data-act="planToggle" data-id="${p.id}" aria-label="Détail de la séance" aria-expanded="${open}">${ic(open?'chevd':'next')}</button><button class="ib" data-act="editPlan" data-id="${p.id}" aria-label="Modifier">${ic('edit')}</button></div>`+
+    h+=`<article class="prow"><div class="prow-h"><span class="grow t">${esc(p.name)}</span><button class="btn sm play" data-act="startPlan" data-id="${p.id}"${ok?'':' disabled'} aria-label="Lancer ${esc(p.name)}">${ic('play')}</button><button class="ib" data-act="planToggle" data-id="${p.id}" aria-label="Détail de la séance" aria-expanded="${open}">${ic(open?'chevd':'next')}</button><button class="ib" data-act="editPlan" data-id="${p.id}" aria-label="Modifier">${ic('edit')}</button></div>`+
       (open?`<ul class="pdet"><li class="small muted">${esc(gym?gym.name:'Salle supprimée')}</li>${p.items.map(it=>{const f=itemInfo(gym,it);return`<li><span class="m">${esc(MUSCLE[it.muscle]||'')}</span><span>${f?`<b>${esc(f.name)}</b>${f.where?` <span class="muted">· ${esc(f.where)}</span>`:''} · ${wTxt(f.e)}`:'<i>Supprimé du plan</i>'}</span></li>`}).join('')}</ul>`:'')+`</article>`;
   }
   return h+`</div></div>`;
