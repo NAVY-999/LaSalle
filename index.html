@@ -170,6 +170,8 @@ svg.plan{width:100%;height:100%;display:block;touch-action:none;user-select:none
 .pl-elab rect{fill:var(--orange)}
 .pl-elab text{fill:var(--on-orange);font-family:var(--font-display);font-weight:900;font-stretch:80%;letter-spacing:1px}
 .pl-entry.sel .pl-elab rect{stroke:var(--plan-ink);stroke-width:5}
+.hdl-l{stroke:var(--orange);stroke-width:4}
+.hdl-ro{fill:var(--plan-bg);stroke:var(--orange);stroke-width:6}
 .snap-l{stroke:var(--orange);stroke-width:3;stroke-dasharray:10 8;fill:none}
 .snap-p{fill:none;stroke:var(--orange);stroke-width:5}
 .zn-r{fill:var(--plan-zone);stroke:var(--plan-ink);stroke-width:4;stroke-dasharray:3 11;stroke-linecap:round}
@@ -202,6 +204,15 @@ svg.plan{width:100%;height:100%;display:block;touch-action:none;user-select:none
 .pick.on .ck{background:var(--orange);border-color:var(--orange)}
 
 /* séances */
+.prow{background:var(--surface);border-radius:12px;padding:6px 6px 6px 14px}
+.prow-h{display:flex;align-items:center;gap:2px}
+.prow-h .t{font-weight:800;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow-h .btn{margin:0 2px 0 8px;padding:6px 10px;min-height:36px;font-size:13.5px;gap:5px}
+.prow-h .btn svg.i{width:16px;height:16px}
+.pdet{margin:4px 0 10px;padding:0 8px 0 0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:14px}
+.pdet li{display:flex;gap:8px}
+.pdet .m{width:96px;flex:none;color:var(--ink-3);font-weight:700;font-size:12px;letter-spacing:.04em;text-transform:uppercase;padding-top:2px}
+.wt-max span{display:block;padding:0 20px;font-family:var(--font-display);font-weight:900;font-stretch:80%;font-size:22px;line-height:46px;color:var(--orange-text)}
 .plan-c{background:var(--surface);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
 .plan-c ul{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:4px;font-size:14px}
 .plan-c li{display:flex;gap:8px}
@@ -301,7 +312,7 @@ const IC={
   check:'<path d="M5 12.5l4.5 4.5L19 7.5"/>',trash:'<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>',
   edit:'<path d="M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4"/>',play:'<path d="M7 4.5v15l12-7.5z"/>',
   fit:'<path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/>',chevd:'<path d="M6 9l6 6 6-6"/>',
-  prev:'<path d="M15 6l-6 6 6 6"/>',next:'<path d="M9 6l6 6-6 6"/>',wall:'<path d="M4 20V4M4 4h16"/>',zone:'<rect x="3.5" y="5" width="17" height="14" rx="2" stroke-dasharray="3 3"/>',camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',door:'<path d="M5 21V4h9v17M14 6l5 2v13M11 12h.01"/>',void:'<path d="M4 4h16v16H4z" fill="currentColor" fill-opacity=".35"/><path d="M4 4l16 16M12 4l8 8M4 12l8 8"/>',ruler:'<path d="M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2"/>'};
+  prev:'<path d="M15 6l-6 6 6 6"/>',next:'<path d="M9 6l6 6-6 6"/>',wall:'<path d="M4 20V4M4 4h16"/>',zone:'<rect x="3.5" y="5" width="17" height="14" rx="2" stroke-dasharray="3 3"/>',camera:'<path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/>',door:'<path d="M5 21V4h9v17M14 6l5 2v13M11 12h.01"/>',void:'<path d="M4 4h16v16H4z" fill="currentColor" fill-opacity=".35"/><path d="M4 4l16 16M12 4l8 8M4 12l8 8"/>',turn:'<path d="M4 12a8 8 0 0 1 14-5.3M20 4v5h-5M20 12a8 8 0 0 1-14 5.3M4 20v-5h5"/>',ruler:'<path d="M3 17L17 3l4 4L7 21zM7 13l2 2M10 10l2 2M13 7l2 2"/>'};
 const ic=n=>`<svg class="i" viewBox="0 0 24 24" aria-hidden="true">${IC[n]}</svg>`;
 
 /* ============ état ============ */
@@ -410,6 +421,9 @@ function itemInfo(gym,it){
 }
 const uniqMachines=g=>{const seen=new Set();return machinesOf(g).filter(m=>{const k=mkey(m.name);if(seen.has(k))return false;seen.add(k);return true})};
 const ago=t=>{const d=Math.round((new Date(dayKey(Date.now())).getTime()-new Date(dayKey(t)).getTime())/864e5);return d<=0?"aujourd'hui":d===1?'hier':`il y a ${d} j`};
+const wTxt=e=>e?.max?'Max':`${fmt(e?.weight||0)} kg`;
+// Le poids de départ est le premier poids réel noté : les 0 et « Max » ne comptent pas.
+const firstW=e=>(e.hist||[]).find(p=>!p.max&&num(p.w)>0)||null;
 const fmtDate=t=>new Date(t).toLocaleDateString('fr-FR',{day:'numeric',month:'short'});
 
 /* ============ plan de salle : rendu ============ */
@@ -425,8 +439,9 @@ function blockText(m){
     if(f2>fs){lines=[best.a,best.b];fs=f2}
   }
   fs=Math.max(fs,9);
-  const lh=fs*1.02,y0=-(lines.length-1)*lh/2;
-  return`<g transform="translate(${w/2},${h/2}) rotate(${tall?-90:0})">${lines.map((l,i)=>`<text text-anchor="middle" dominant-baseline="central" y="${y0+i*lh}" font-size="${fs.toFixed(1)}">${esc(l)}</text>`).join('')}</g>`;
+  // texte jamais à l'envers, même quand le bloc est incliné
+  const lh=fs*1.02,y0=-(lines.length-1)*lh/2,base=tall?-90:0,eff=(((m.rot||0)+base)%360+540)%360-180,tr=Math.abs(eff)>90?base+180:base;
+  return`<g transform="translate(${w/2},${h/2}) rotate(${tr})">${lines.map((l,i)=>`<text text-anchor="middle" dominant-baseline="central" y="${y0+i*lh}" font-size="${fs.toFixed(1)}">${esc(l)}</text>`).join('')}</g>`;
 }
 function mapContent(M){
   const gym=getGym(M.gymId);if(!gym)return'';
@@ -438,8 +453,8 @@ function mapContent(M){
   const state=b=>{if(M.mode!=='session'||!A)return'';const k=b.kind+':'+mkey(b.name),its=A.items.filter(x=>keyOf(x.machineId)===k);return curKey===k?' cur':its.length&&its.every(x=>x.done)?' done':''};
   for(const z of zonesOf(gym)){
     const lab=String(z.name||'').toUpperCase(),fs=Math.max(14,Math.min(34,z.h*U*0.16,(z.w*U-28)/(Math.max(lab.length,4)*0.6)));
-    s+=`<g class="zn${state(z)}${sel===z.id?' sel':''}" data-id="${z.id}" transform="translate(${z.x*U},${z.y*U})"><rect class="zn-r" width="${z.w*U}" height="${z.h*U}" rx="14"/><text x="16" y="${fs+12}" font-size="${fs.toFixed(1)}">${esc(lab)}</text>`+
-      (sel===z.id?handle(z.w,z.h,'rs'):'')+`</g>`;
+    s+=`<g class="zn${state(z)}${sel===z.id?' sel':''}" data-id="${z.id}" transform="${blockTf(z)}"><rect class="zn-r" width="${z.w*U}" height="${z.h*U}" rx="14"/><text x="16" y="${fs+12}" font-size="${fs.toFixed(1)}">${esc(lab)}</text>`+
+      (sel===z.id?handle(z.w,z.h,'rs')+rotHandle(z.w):'')+`</g>`;
   }
   if(gym.outer!==false)s+=`<rect class="pl-outer" width="${W_}" height="${H_}"/>`;
   for(const w of gym.items.filter(i=>i.kind==='wall')){
@@ -455,18 +470,29 @@ function mapContent(M){
   for(const m of machinesOf(gym)){
     let cls='blk'+state(m);
     if(sel===m.id)cls+=' sel';
-    s+=`<g class="${cls}" data-id="${m.id}" transform="translate(${m.x*U},${m.y*U})"><g class="blk-in"><rect class="blk-r" width="${m.w*U}" height="${m.h*U}" rx="8"/>${blockText(m)}</g>`+
-      (sel===m.id?handle(m.w,m.h,'rs'):'')+`</g>`;
+    s+=`<g class="${cls}" data-id="${m.id}" transform="${blockTf(m)}"><g class="blk-in"><rect class="blk-r" width="${m.w*U}" height="${m.h*U}" rx="8"/>${blockText(m)}</g>`+
+      (sel===m.id?handle(m.w,m.h,'rs')+rotHandle(m.w):'')+`</g>`;
   }
   if(ui.hint&&M.mode==='edit'){
     for(const l of ui.hint.lines||[])s+=`<line class="snap-l" x1="${l[0]*U}" y1="${l[1]*U}" x2="${l[2]*U}" y2="${l[3]*U}"/>`;
     for(const q of ui.hint.pts||[])s+=`<circle class="snap-p" cx="${q[0]*U}" cy="${q[1]*U}" r="20"/>`;
+    if(ui.hint.label)s+=`<text class="dim-t" x="${ui.hint.label.x*U+30}" y="${ui.hint.label.y*U-30}" font-size="34">${esc(ui.hint.label.text)}</text>`;
   }
   if(ui.draft&&M.mode==='edit'){
     const d=ui.draft,L=Math.hypot(d.b.x-d.a.x,d.b.y-d.a.y);
     s+=`<line class="draft-l" x1="${d.a.x*U}" y1="${d.a.y*U}" x2="${d.b.x*U}" y2="${d.b.y*U}"/><text class="dim-t" x="${d.b.x*U+16}" y="${d.b.y*U-16}" font-size="30">${fmt(L)} m</text>`;
   }
   return s;
+}
+// Un bloc pivote autour de son centre ; x, y restent le coin haut-gauche du bloc non pivoté.
+const blockTf=b=>`translate(${b.x*U},${b.y*U})${b.rot?` rotate(${b.rot} ${b.w*U/2} ${b.h*U/2})`:''}`;
+function rotHandle(w){return`<line class="hdl-l" x1="${w*U/2}" y1="0" x2="${w*U/2}" y2="-55"/><circle class="hdl-hit" data-h="ro" cx="${w*U/2}" cy="-55" r="46"/><circle class="hdl hdl-ro" data-h="ro" cx="${w*U/2}" cy="-55" r="15"/>`}
+// Angle aimanté sur celui des murs (et l'équerre), sinon tous les 15°.
+function snapAngle(gym,a){
+  const norm=v=>((v%360)+540)%360-180,dist=(x,y)=>Math.abs(norm(x-y));a=norm(a);let best=null;
+  for(const w of wallsOf(gym)){const wa=Math.atan2(w.y2-w.y1,w.x2-w.x1)*180/Math.PI;for(const k of[0,90,180,270]){const c=norm(wa+k);if(dist(a,c)<4&&(best==null||dist(a,c)<dist(a,best)))best=c}}
+  if(best!=null)return Math.round(best*10)/10;
+  const q=Math.round(a/15)*15;return dist(a,q)<3?norm(q):Math.round(a);
 }
 function handle(x,y,h){return`<circle class="hdl-hit" data-h="${h}" cx="${x*U}" cy="${y*U}" r="46"/><circle class="hdl" data-h="${h}" cx="${x*U}" cy="${y*U}" r="17"/>`}
 
@@ -698,8 +724,17 @@ function wireMap(M){
           const ex=q[0]-(p[0]+dx),ey=q[1]-(p[1]+dy),d=Math.hypot(ex,ey);if(d<bd){bd=d;bx=dx+ex;by=dy+ey;mk=[q]}}
         it.x1=o.x1+bx;it.y1=o.y1+by;it.x2=o.x2+bx;it.y2=o.y2+by;hint(mk,[]);
       }else if(it.kind==='entry'){seatEntry(gym,it,{x:o.x+dx,y:o.y+dy},snapRad(M)*3)}
+      else if(it.rot){it.x=clamp(snap(o.x+dx),-it.w/2,gym.w-it.w/2);it.y=clamp(snap(o.y+dy),-it.h/2,gym.h-it.h/2)}
       else{const s=snapBlock(M,it,o.x+dx,o.y+dy);it.x=clamp(s.x,0,Math.max(0,gym.w-it.w));it.y=clamp(s.y,0,Math.max(0,gym.h-it.h));hint([],s.lines)}
-    }else if(G.h==='rs'){it.w=clamp(snap(o.w+dx),0.5,gym.w-it.x);it.h=clamp(snap(o.h+dy),0.5,gym.h-it.y)}
+    }else if(G.h==='rs'){
+      // taille mesurée dans l'axe du bloc ; le coin opposé à la poignée reste en place
+      const a=(o.rot||0)*Math.PI/180,c=Math.cos(a),sn=Math.sin(a),w=Math.max(0.5,snap(o.w+dx*c+dy*sn)),h=Math.max(0.5,snap(o.h-dx*sn+dy*c));
+      const tlx=o.x+o.w/2-(o.w/2*c-o.h/2*sn),tly=o.y+o.h/2-(o.w/2*sn+o.h/2*c),cx=tlx+(w/2*c-h/2*sn),cy=tly+(w/2*sn+h/2*c);
+      it.w=w;it.h=h;it.x=cx-w/2;it.y=cy-h/2;
+    }else if(G.h==='ro'){
+      const cx=o.x+o.w/2,cy=o.y+o.h/2,ang=snapAngle(gym,Math.atan2(r.y-cy,r.x-cx)*180/Math.PI+90);
+      it.rot=Math.abs(ang)<0.05?0:ang;hint([],[]);ui.hint.label={x:cx,y:cy,text:`${fmt(Math.round(ang))}°`};
+    }
     else{
       const k=G.h==='p1'?1:2,f=k===1?2:1,s=snapPoint(M,{x:o['x'+k]+dx,y:o['y'+k]+dy},it.id,{x:o['x'+f],y:o['y'+f]});
       it['x'+k]=s.x;it['y'+k]=s.y;hint(s.mark?[[s.x,s.y]]:[],s.guides.map(q=>[q[0],q[1],s.x,s.y]));
@@ -780,8 +815,8 @@ function renderInspector(){
   const gym=curGym(),it=ui.sel?getItem(gym,ui.sel):null;
   if(!it){el.innerHTML=`<span class="grow small muted">${ui.tool==='wall'?'Les murs s\'accrochent aux bouts et aux autres murs, et s\'alignent tout seuls.':ui.tool==='void'?'Touche un espace fermé par des murs : il passe en vide. Touche-le à nouveau pour l\'annuler.':machinesOf(gym).length||zonesOf(gym).length?'Glisse une machine pour la déplacer. Touche une zone pour la sélectionner, puis glisse-la.':'Ajoute tes machines avec « + Machine » et tes zones avec « + Zone ».'}</span>`;return}
   const nx=it.kind==='zone'?zoneOf(it).exos.length:0;
-  el.innerHTML=`<div class="grow"><div class="t">${it.kind==='wall'?'Mur':it.kind==='entry'?'Entrée':esc(it.name)}</div><div class="small muted">${it.kind==='zone'?`Zone · ${nx} exercice${nx>1?'s':''} · touche-la pour les gérer`:it.kind==='machine'?'Glisse le rond orange pour changer la taille':it.kind==='entry'?'Glisse-la le long d\'un mur':'Glisse les ronds orange pour l\'ajuster'}</div></div>`+
-    (it.kind==='machine'||it.kind==='zone'?`<button class="ib" data-act="itEdit" aria-label="Modifier">${ic('edit')}</button>`:'')+
+  el.innerHTML=`<div class="grow"><div class="t">${it.kind==='wall'?'Mur':it.kind==='entry'?'Entrée':esc(it.name)}</div><div class="small muted">${it.kind==='zone'?`Zone · ${nx} exercice${nx>1?'s':''} · rond blanc : pivoter`:it.kind==='machine'?'Rond orange : taille · rond blanc : pivoter':it.kind==='entry'?'Glisse-la le long d\'un mur':'Glisse les ronds orange pour l\'ajuster'}</div></div>`+
+    (it.kind==='machine'||it.kind==='zone'?`<button class="ib" data-act="itAlign" aria-label="Aligner sur le mur le plus proche">${ic('turn')}</button><button class="ib" data-act="itEdit" aria-label="Modifier">${ic('edit')}</button>`:'')+
     `<button class="ib" data-act="itDel" aria-label="Supprimer" style="color:var(--danger)">${ic('trash')}</button>`;
 }
 
@@ -789,13 +824,13 @@ function renderInspector(){
 function viewSeances(){
   let h=`<div class="wrap gut"><div class="row"><h1 class="h1 grow">Séances</h1><button class="btn sm" data-act="newPlan">${ic('plus')} Nouvelle</button></div>`;
   if(!S.plans.length)h+=`<div class="empty"><p class="muted">Choisis une salle, puis pour chaque muscle l'exercice et le poids. Quand tu lances la séance, la carte t'indique la machine à faire.</p>${S.gyms.length?`<button class="btn" data-act="newPlan">${ic('plus')} Créer une séance</button>`:`<button class="btn" data-act="tab" data-tab="salle">Créer d'abord une salle</button>`}</div>`;
+  h+=`<div class="stack" style="gap:8px">`;
   for(const p of S.plans){
-    const gym=getGym(p.gymId);
-    h+=`<article class="plan-c"><div><span class="eyebrow">${esc(gym?gym.name:'Salle supprimée')}</span><h2 class="h2" style="margin-top:4px">${esc(p.name)}</h2></div>
-      <ul>${p.items.map(it=>{const f=itemInfo(gym,it);return`<li><span class="m">${esc(MUSCLE[it.muscle]||'')}</span><span>${f?`<b>${esc(f.name)}</b>${f.where?` <span class="muted">· ${esc(f.where)}</span>`:''} · ${fmt(f.e.weight)} kg`:'<i>Supprimé du plan</i>'}</span></li>`}).join('')}</ul>
-      <div class="row"><button class="btn grow" data-act="startPlan" data-id="${p.id}"${gym&&p.items.some(it=>itemInfo(gym,it))?'':' disabled'}>${ic('play')} Lancer</button><button class="ib" data-act="editPlan" data-id="${p.id}" aria-label="Modifier">${ic('edit')}</button><button class="ib" data-act="delPlan" data-id="${p.id}" aria-label="Supprimer" style="color:var(--danger)">${ic('trash')}</button></div></article>`;
+    const gym=getGym(p.gymId),open=ui.openPlan===p.id,ok=gym&&p.items.some(it=>itemInfo(gym,it));
+    h+=`<article class="prow"><div class="prow-h"><span class="grow t">${esc(p.name)}</span><button class="btn sm" data-act="startPlan" data-id="${p.id}"${ok?'':' disabled'}>${ic('play')} Lancer</button><button class="ib" data-act="planToggle" data-id="${p.id}" aria-label="Détail de la séance" aria-expanded="${open}">${ic(open?'chevd':'next')}</button><button class="ib" data-act="editPlan" data-id="${p.id}" aria-label="Modifier">${ic('edit')}</button></div>`+
+      (open?`<ul class="pdet"><li class="small muted">${esc(gym?gym.name:'Salle supprimée')}</li>${p.items.map(it=>{const f=itemInfo(gym,it);return`<li><span class="m">${esc(MUSCLE[it.muscle]||'')}</span><span>${f?`<b>${esc(f.name)}</b>${f.where?` <span class="muted">· ${esc(f.where)}</span>`:''} · ${wTxt(f.e)}`:'<i>Supprimé du plan</i>'}</span></li>`}).join('')}</ul>`:'')+`</article>`;
   }
-  return h+`</div>`;
+  return h+`</div></div>`;
 }
 
 /* ---------- Profil : jours de salle ---------- */
@@ -829,24 +864,19 @@ function importCode(code){
 }
 function transferCard(){return`<section class="card stack"><h2 class="h2">Appli Android</h2><p class="small muted">Pour retrouver tes salles, machines et séances dans l'appli installée : copie tes données ici, puis dans l'appli va dans Profil, « Importer mes données », et colle.</p><button class="btn" data-act="copyData">Copier mes données</button><textarea class="inp" id="codeOut" rows="3" readonly hidden aria-label="Code de tes données"></textarea></section>`}
 function importCard(){return`<section class="card stack"><h2 class="h2">Importer</h2><p class="small muted">Pour récupérer ce que tu as fait dans la version Claude : là-bas, va dans Profil, « Copier mes données », puis colle le code ici.</p><button class="btn dark" data-act="openImport">Importer mes données</button><button class="btn ghost" data-act="copyData">Copier mes données (sauvegarde)</button><textarea class="inp" id="codeOut" rows="3" readonly hidden aria-label="Code de tes données"></textarea></section>`}
-// Chaque machine faite en séance = 3 séries : 3 pour le muscle choisi, 1,5 pour ses autres muscles.
+// Nombre de séances des 7 derniers jours où le muscle a été choisi.
 function weeklySets(){
-  const now=Date.now(),sets={},last={};
-  for(const l of S.log)for(const it of l.items){
-    for(const m of it.muscles||[])last[m]=Math.max(last[m]||0,l.t);
-    if(l.t<now-7*864e5)continue;
-    for(const m of new Set([it.muscle,...(it.muscles||[])]))sets[m]=(sets[m]||0)+(m===it.muscle?3:1.5);
-  }
-  const rows=MUSCLES.filter(m=>m.id!=='cardio').sort((a,b)=>(sets[b.id]||0)-(sets[a.id]||0));
-  return`<section class="stack"><div class="sec-h"><h2 class="h2">Séries par muscle · 7 j</h2><span class="small muted">zone conseillée 10–20</span></div>
-    <div class="card mbs">${rows.map(m=>{const v=sets[m.id]||0;return`<div class="mb"><span class="nm">${m.name}</span><span class="tr"><span class="band"></span><i style="width:${Math.min(100,v/40*100)}%"></i></span><span class="v"><b>${fmt(v)}</b><br>${last[m.id]?ago(last[m.id]):'jamais'}</span></div>`}).join('')}</div>
-    <p class="small muted">Chaque exercice fait = 3 séries pour le muscle choisi dans la séance, ½ pour ses autres muscles. La barre pleine = 40 séries.</p></section>`;
+  const now=Date.now(),cnt={},last={};
+  for(const l of S.log)for(const m of new Set(l.items.map(i=>i.muscle))){last[m]=Math.max(last[m]||0,l.t);if(l.t>=now-7*864e5)cnt[m]=(cnt[m]||0)+1}
+  const rows=MUSCLES.filter(m=>m.id!=='cardio').sort((a,b)=>(cnt[b.id]||0)-(cnt[a.id]||0));
+  return`<section class="stack"><div class="sec-h"><h2 class="h2">Séances par muscle · 7 j</h2><span class="small muted">conseillé 2–3</span></div>
+    <div class="card mbs">${rows.map(m=>{const v=cnt[m.id]||0;return`<div class="mb"><span class="nm">${m.name}</span><span class="tr"><span class="band" style="left:40%;width:20%"></span><i style="width:${Math.min(100,v/5*100)}%"></i></span><span class="v"><b>${v}</b><br>${last[m.id]?ago(last[m.id]):'jamais'}</span></div>`}).join('')}</div></section>`;
 }
 function machineList(){
   const list=Object.entries(S.machines).sort((a,b)=>a[1].name.localeCompare(b[1].name));
   if(!list.length)return'';
-  return`<section class="stack"><h2 class="h2">Mes machines et exercices</h2><div class="list">${list.map(([k,e])=>{const s0=e.hist?.[0]?.w??e.weight,d=e.weight-s0;
-    return`<button class="li" data-act="mEvo" data-k="${esc(k)}"><span class="grow"><span class="t">${esc(e.name)}</span><br><span class="small muted">départ ${fmt(s0)} kg</span></span><span class="kgv">${fmt(e.weight)} kg<small class="${d>0?'up':''}">${d?`${d>0?'+':''}${fmt(d)} kg`:'='}</small></span>${ic('next')}</button>`}).join('')}</div></section>`;
+  return`<section class="stack"><h2 class="h2">Mes machines et exercices</h2><div class="list">${list.map(([k,e])=>{const f=firstW(e),d=!e.max&&f?e.weight-f.w:0;
+    return`<button class="li" data-act="mEvo" data-k="${esc(k)}"><span class="grow"><span class="t">${esc(e.name)}</span><br><span class="small muted">${f?`départ ${fmt(f.w)} kg`:'pas encore de poids'}</span></span><span class="kgv">${wTxt(e)}<small class="${d>0?'up':''}">${e.max?'':d?`${d>0?'+':''}${fmt(d)} kg`:'='}</small></span>${ic('next')}</button>`}).join('')}</div></section>`;
 }
 
 /* ============ feuilles ============ */
@@ -872,7 +902,10 @@ const top_=()=>ui.sheets[ui.sheets.length-1];
 function confirmBox(title,text,okLabel,onOk){
   pushSheet(()=>({title:esc(title),body:`<p class="muted">${text}</p>`,foot:`<button class="btn ghost" data-act="closeSheet">Annuler</button><button class="btn dark" data-act="confirmOk">${esc(okLabel)}</button>`}),{onOk});
 }
-function weightCtl(id,val,sm,attrs=''){return`<div class="wt${sm?' sm':''}"><button data-act="wStep" data-d="-1" data-for="${id}" aria-label="Moins 2,5 kg">${ic('minus')}</button><input id="${id}" data-in="weight" ${attrs} inputmode="decimal" value="${fmt(val)}" aria-label="Poids en kg"><span>kg</span><button data-act="wStep" data-d="1" data-for="${id}" aria-label="Plus 2,5 kg">${ic('plus')}</button></div>`}
+function weightCtl(id,val,sm,attrs='',isMax=false){
+  const ctl=isMax?`<div class="wt wt-max"><span>MAX</span></div>`:`<div class="wt${sm?' sm':''}"><button data-act="wStep" data-d="-1" data-for="${id}" aria-label="Moins 2,5 kg">${ic('minus')}</button><input id="${id}" data-in="weight" ${attrs} inputmode="decimal" value="${fmt(val)}" aria-label="Poids en kg"><span>kg</span><button data-act="wStep" data-d="1" data-for="${id}" aria-label="Plus 2,5 kg">${ic('plus')}</button></div>`;
+  return`<div class="row" style="gap:8px;flex-wrap:nowrap">${ctl}<button class="chip${isMax?' on':''}" data-act="wMax" aria-pressed="${isMax}">Max</button></div>`;
+}
 
 /* ---------- machine ---------- */
 // Hors « Modifier », la fiche est en lecture seule. En modification, tout changement de poids s'ajoute à l'historique.
@@ -886,12 +919,11 @@ const musChips=(e,edit)=>edit?`<div class="chips">${MUSCLES.map(x=>`<button clas
 function sheetMachine(){
   const t=top_(),gym=getGym(t.gymId),b=getItem(gym,t.mid);if(!b)return null;
   const e=entryOf(b);
-  if(!t.editable)return{eyebrow:esc(gym.name),title:esc(b.name),body:`<div class="stack"><span class="eyebrow">Ce qu'elle travaille</span>${musChips(e,false)}</div>
-    <div class="stack"><span class="eyebrow">Poids actuel · 3 × 12</span><span class="kg">${fmt(e.weight)}<small>kg</small></span></div>
-    <p class="small muted">Pour changer le poids, appuie sur « Modifier » dans l'onglet Salle.</p>`};
+  if(!t.editable)return{eyebrow:esc(gym.name),title:esc(b.name),body:`${musChips(e,false)}
+    <div class="stack"><span class="eyebrow">Poids actuel</span><span class="kg">${e.max?'MAX':fmt(e.weight)}<small>${e.max?'':'kg'}</small></span></div>`};
   return{eyebrow:esc(gym.name),title:esc(b.name),body:`<label class="field"><span>Nom</span><input class="inp" id="mName" data-ch="mRename" value="${esc(b.name)}"></label>
-    <div class="stack"><span class="eyebrow">Ce qu'elle travaille</span>${musChips(e,true)}</div>
-    <div class="row"><span class="eyebrow grow">Poids actuel · 3 × 12</span>${weightCtl('mW',e.weight)}</div>`,
+    <div class="stack"><span class="eyebrow">Muscles</span>${musChips(e,true)}</div>
+    <div class="stack"><span class="eyebrow">Poids actuel</span>${weightCtl('mW',e.weight,false,'',!!e.max)}</div>`,
     foot:`<button class="btn danger" data-act="mDel">${ic('trash')} Retirer du plan</button><button class="btn" data-act="closeSheet">OK</button>`};
 }
 function sheetNewMachine(){
@@ -907,14 +939,15 @@ function newSug(t){
 }
 function newDet(t){
   const e=sheetEntry(t),known=e!==t.draft;
-  return`${known?`<p class="small muted">${t.zk?'Exercice':'Machine'} déjà créé${t.zk?'':'e'} : ses muscles et son poids sont repris.</p>`:''}<div class="stack"><span class="eyebrow">Ce qu'elle travaille</span>${musChips(e,true)}</div>
-    <div class="row"><span class="eyebrow grow">Poids actuel · 3 × 12</span>${weightCtl('mW',e.weight)}</div>`;
+  return`${known?`<p class="small muted">${t.zk?'Exercice':'Machine'} déjà créé${t.zk?'':'e'} : ses muscles et son poids sont repris.</p>`:''}<div class="stack"><span class="eyebrow">Muscles</span>${musChips(e,true)}</div>
+    <div class="stack"><span class="eyebrow">Poids actuel</span>${weightCtl('mW',e.weight,false,'',!!e.max)}</div>`;
 }
 function trackWeight(t,e){
   if(e===t.draft||!e.hist)return;
-  const h=e.hist,pt={t:Date.now(),w:e.weight};
+  const h=e.hist,pt={t:Date.now(),w:e.weight,...(e.max?{max:true}:{})};
   if(t.histOn&&h.length)h[h.length-1]=pt;else{h.push(pt);t.histOn=true}
-  if(h.length>=2&&h[h.length-1].w===h[h.length-2].w){h.pop();t.histOn=false}
+  const a=h[h.length-1],b=h[h.length-2];
+  if(b&&a.w===b.w&&!!a.max===!!b.max){h.pop();t.histOn=false}
 }
 function renameMachine(t,name){
   name=name.trim();const g=getGym(t.gymId),b=getItem(g,t.mid);if(!b||!name)return;
@@ -938,11 +971,11 @@ function weightChart(h){
 }
 function openMachineEvo(k){pushSheet(()=>{
   const e=S.machines[k];if(!e)return null;
-  const h=e.hist?.length?e.hist:[{t:Date.now(),w:e.weight}],first=h[0],d=e.weight-first.w;
-  return{eyebrow:e.muscles.map(x=>MUSCLE[x]).join(' · ')||'Machine',title:esc(e.name),body:`<div class="evo"><div><span class="eyebrow">Départ</span><span class="kg">${fmt(first.w)}<small>kg</small></span><span class="small muted">${fmtDate(first.t)}</span></div>
-    <div><span class="eyebrow">Actuel</span><span class="kg">${fmt(e.weight)}<small>kg</small></span><span class="small ${d>0?'up':'muted'}">${d?`${d>0?'+':''}${fmt(d)} kg`:'pas encore de changement'}</span></div></div>
-    ${weightChart(h)}
-    <div class="list">${h.slice().reverse().map(p=>`<div class="li"><span class="grow">${new Date(p.t).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</span><b>${fmt(p.w)} kg</b></div>`).join('')}</div>`};
+  const all=e.hist?.length?e.hist:[{t:Date.now(),w:e.weight,max:e.max}],i0=all.findIndex(p=>!p.max&&num(p.w)>0),h=i0>=0?all.slice(i0):all,first=i0>=0?all[i0]:null,d=!e.max&&first?e.weight-first.w:0;
+  return{eyebrow:e.muscles.map(x=>MUSCLE[x]).join(' · ')||'Machine',title:esc(e.name),body:`<div class="evo"><div><span class="eyebrow">Départ</span>${first?`<span class="kg">${fmt(first.w)}<small>kg</small></span><span class="small muted">${fmtDate(first.t)}</span>`:'<span class="kg">—</span>'}</div>
+    <div><span class="eyebrow">Actuel</span><span class="kg">${e.max?'MAX':fmt(e.weight)}<small>${e.max?'':'kg'}</small></span><span class="small ${d>0?'up':'muted'}">${d?`${d>0?'+':''}${fmt(d)} kg`:''}</span></div></div>
+    ${weightChart(h.filter(p=>!p.max))}
+    <div class="list">${h.slice().reverse().map(p=>`<div class="li"><span class="grow">${new Date(p.t).toLocaleDateString('fr-FR',{day:'numeric',month:'long',year:'numeric'})}</span><b>${p.max?'Max':fmt(p.w)+' kg'}</b></div>`).join('')}</div>`};
 })}
 
 /* ---------- zones et leurs exercices ---------- */
@@ -961,16 +994,14 @@ function zSug(t){
   return(known?`<p class="small muted">Zone déjà créée : ses ${known.exos.length} exercice${known.exos.length>1?'s':''} sont repris.</p>`:'')+
     (names.length?`<div class="stack"><span class="eyebrow">Suggestions</span><div class="chips">${names.map(n=>`<button class="chip" data-act="zPick" data-v="${esc(n)}">${esc(n)}</button>`).join('')}</div></div>`:'');
 }
-const exoRow=(k,e,edit)=>`<${edit?'button':'div'} class="li"${edit?` data-act="exOpen" data-k="${esc(k)}"`:''}><span class="grow"><span class="t">${esc(e.name)}</span><br><span class="small muted">${e.muscles.map(x=>MUSCLE[x]).join(' · ')||'Aucun muscle noté'}</span></span><span class="kgv">${fmt(e.weight)} kg<small>3 × 12</small></span>${edit?ic('next'):''}</${edit?'button':'div'}>`;
+const exoRow=(k,e,edit)=>`<${edit?'button':'div'} class="li"${edit?` data-act="exOpen" data-k="${esc(k)}"`:''}><span class="grow"><span class="t">${esc(e.name)}</span><br><span class="small muted">${e.muscles.map(x=>MUSCLE[x]).join(' · ')||'Aucun muscle noté'}</span></span><span class="kgv">${wTxt(e)}</span>${edit?ic('next'):''}</${edit?'button':'div'}>`;
 function sheetZone(){
   const t=top_(),gym=getGym(t.gymId),b=getItem(gym,t.zid);if(!b)return null;
   const z=zoneOf(b),list=z.exos.map(k=>[k,S.machines[k]]).filter(x=>x[1]);
   const rows=list.length?`<div class="list">${list.map(([k,e])=>exoRow(k,e,t.editable)).join('')}</div>`:`<p class="small muted">Aucun exercice pour l'instant.</p>`;
-  if(!t.editable)return{eyebrow:`Zone · ${esc(gym.name)}`,title:esc(b.name),body:`<div class="stack"><span class="eyebrow">Exercices de cette zone</span>${rows}</div>
-    <p class="small muted">Pour modifier, appuie sur « Modifier » dans l'onglet Salle.</p>`};
+  if(!t.editable)return{eyebrow:`Zone · ${esc(gym.name)}`,title:esc(b.name),body:rows};
   return{eyebrow:`Zone · ${esc(gym.name)}`,title:esc(b.name),body:`<label class="field"><span>Nom de la zone</span><input class="inp" id="zName" data-ch="zRename" value="${esc(b.name)}"></label>
-    <div class="stack"><span class="eyebrow">Exercices de cette zone</span>${rows}<button class="btn ghost" data-act="exNew">${ic('plus')} Ajouter un exercice</button></div>
-    <p class="small muted">Les zones qui portent le même nom ont les mêmes exercices, dans toutes tes salles.</p>`,
+    <div class="stack"><span class="eyebrow">Exercices de cette zone</span>${rows}<button class="btn ghost" data-act="exNew">${ic('plus')} Ajouter un exercice</button></div>`,
     foot:`<button class="btn danger" data-act="zDel">${ic('trash')} Retirer du plan</button><button class="btn" data-act="closeSheet">OK</button>`};
 }
 function sheetNewExo(){
@@ -981,9 +1012,8 @@ function sheetNewExo(){
 }
 function sheetExo(){
   const t=top_(),e=S.machines[t.ek];if(!e)return null;
-  return{eyebrow:`Zone ${esc(S.zones[t.zk]?.name||'')}`,title:esc(e.name),body:`<div class="stack"><span class="eyebrow">Ce qu'il travaille</span>${musChips(e,true)}</div>
-    <div class="row"><span class="eyebrow grow">Poids actuel · 3 × 12</span>${weightCtl('mW',e.weight)}</div>
-    <p class="small muted">Un exercice du même nom ailleurs (autre zone ou machine) partage ce poids.</p>`,
+  return{eyebrow:`Zone ${esc(S.zones[t.zk]?.name||'')}`,title:esc(e.name),body:`<div class="stack"><span class="eyebrow">Muscles</span>${musChips(e,true)}</div>
+    <div class="stack"><span class="eyebrow">Poids actuel</span>${weightCtl('mW',e.weight,false,'',!!e.max)}</div>`,
     foot:`<button class="btn danger" data-act="exRemove">${ic('trash')} Retirer de la zone</button><button class="btn" data-act="closeSheet">OK</button>`};
 }
 function renameZone(t,name){
@@ -1031,18 +1061,18 @@ function sheetPlan(){
     <div class="stack"><span class="eyebrow">Muscles</span><div class="chips">${MUSCLES.map(m=>`<button class="chip${pb.muscles.includes(m.id)?' on':''}" data-act="pbMus" data-m="${m.id}">${m.name}</button>`).join('')}</div></div>`;
   for(const mus of pb.muscles){
     const cs=[];
-    for(const m of uniqMachines(gym)){const e=entryOf(m);if(e.muscles.includes(mus))cs.push({id:m.id,exo:'',name:m.name,where:'',w:e.weight})}
-    for(const z of uniqZones(gym))for(const k of zoneOf(z).exos){const e=S.machines[k];if(e&&e.muscles.includes(mus))cs.push({id:z.id,exo:k,name:e.name,where:z.name,w:e.weight})}
+    for(const m of uniqMachines(gym)){const e=entryOf(m);if(e.muscles.includes(mus))cs.push({id:m.id,exo:'',name:m.name,where:'',e})}
+    for(const z of uniqZones(gym))for(const k of zoneOf(z).exos){const e=S.machines[k];if(e&&e.muscles.includes(mus))cs.push({id:z.id,exo:k,name:e.name,where:z.name,e})}
     b+=`<div class="stack"><h3 class="h3">${MUSCLE[mus]}</h3>`;
     if(!cs.length)b+=`<p class="small muted">Aucune machine ni zone de cette salle n'est notée pour ce muscle.</p>`;
     for(const c of cs){
       const on=pb.items.some(it=>it.machineId===c.id&&(it.exo||'')===c.exo&&it.muscle===mus);
-      b+=`<button class="pick${on?' on':''}" data-act="pbToggle" data-m="${c.id}" data-e="${esc(c.exo)}" data-mu="${mus}"><span class="ck">${on?ic('check'):''}</span><span class="grow"><b>${esc(c.name)}</b>${c.where?`<br><span class="small muted">${esc(c.where)}</span>`:''}</span><span class="muted">${fmt(c.w)} kg</span></button>`;
+      b+=`<button class="pick${on?' on':''}" data-act="pbToggle" data-m="${c.id}" data-e="${esc(c.exo)}" data-mu="${mus}"><span class="ck">${on?ic('check'):''}</span><span class="grow"><b>${esc(c.name)}</b>${c.where?`<br><span class="small muted">${esc(c.where)}</span>`:''}</span><span class="muted">${wTxt(c.e)}</span></button>`;
     }
     b+=`</div>`;
   }
   return{eyebrow:editing?'Modifier la séance':'Nouvelle séance · étape 2',title:esc(pb.name||'Ma séance'),body:b,
-    foot:`<button class="btn" data-act="pbSave"${pb.items.length?'':' disabled'}>Enregistrer la séance</button>`};
+    foot:`${editing?`<button class="ib" data-act="delPlan" data-id="${pb.id}" aria-label="Supprimer la séance" style="color:var(--danger);width:46px;height:46px">${ic('trash')}</button>`:''}<button class="btn" data-act="pbSave"${pb.items.length?'':' disabled'}>Enregistrer la séance</button>`};
 }
 
 /* ============ salle depuis une photo du plan ============ */
@@ -1306,9 +1336,9 @@ function renderSession(){
   const it=A.items[A.cur],f=it&&itemInfo(gym,it),allDone=A.items.every(x=>x.done);
   let h='';
   if(allDone)h+=`<div class="stack" style="align-items:flex-start"><span class="h1">Séance finie</span><p class="muted">Bien joué. Termine pour cocher la journée dans ton profil.</p><button class="btn wide" data-act="finish">${ic('check')} Terminer</button></div>`;
-  else h+=`<div class="stack"><span class="eyebrow">Exercice ${A.cur+1}/${A.items.length} · ${esc(MUSCLE[it.muscle]||'')}</span><h2 class="h1">${esc(f?.name||'Supprimé du plan')}</h2>${f?.where?`<span class="row small muted">${ic('zone')} ${esc(f.where)}</span>`:''}<div class="kgline"><span class="kg">${fmt(f?f.e.weight:0)}<small>kg</small></span><span class="muted">3 × 12</span></div>
+  else h+=`<div class="stack"><span class="eyebrow">Exercice ${A.cur+1}/${A.items.length} · ${esc(MUSCLE[it.muscle]||'')}</span><h2 class="h1">${esc(f?.name||'Supprimé du plan')}</h2>${f?.where?`<span class="row small muted">${ic('zone')} ${esc(f.where)}</span>`:''}<div class="kgline"><span class="kg">${f?.e.max?'MAX':fmt(f?f.e.weight:0)}<small>${f?.e.max?'':'kg'}</small></span></div>
     <button class="btn wide" data-act="nextMachine">${A.items.filter(x=>!x.done).length>1?'Exercice suivant':'Dernier exercice fait'}</button></div>`;
-  h+=`<div>${A.items.map((x,i)=>{const g=itemInfo(gym,x);return`<button class="step${x.done?' done':''}${i===A.cur&&!allDone?' cur':''}" data-act="jump" data-i="${i}"><span class="n">${x.done?ic('check'):i+1}</span><span class="t grow">${esc(g?.name||'')}${g?.where?` <span class="small muted">· ${esc(g.where)}</span>`:''}</span><span class="muted">${fmt(g?.e.weight||0)} kg</span></button>`}).join('')}</div>`;
+  h+=`<div>${A.items.map((x,i)=>{const g=itemInfo(gym,x);return`<button class="step${x.done?' done':''}${i===A.cur&&!allDone?' cur':''}" data-act="jump" data-i="${i}"><span class="n">${x.done?ic('check'):i+1}</span><span class="t grow">${esc(g?.name||'')}${g?.where?` <span class="small muted">· ${esc(g.where)}</span>`:''}</span><span class="muted">${g?wTxt(g.e):''}</span></button>`}).join('')}</div>`;
   $('#ssCard').innerHTML=h;
 }
 function finishSession(){
@@ -1354,6 +1384,14 @@ const ACT={
   togOuter:()=>{const g=curGym();g.outer=g.outer===false;Store.saveMain();refreshSheet()},
   addMachine:()=>{ui.tool='select';openMachine(curGym().id,null)},
   itEdit:()=>{const g=curGym(),it=getItem(g,ui.sel);if(it?.kind==='zone')openZone(g.id,ui.sel);else openMachine(g.id,ui.sel)},
+  itAlign:()=>{
+    const g=curGym(),it=getItem(g,ui.sel);if(!it)return;
+    const c={x:it.x+it.w/2,y:it.y+it.h/2};let best=null;
+    for(const w of wallsOf(g).concat(outlineOf(g))){const r=projSeg(c,w);if(!best||r.d<best.d)best={...r,w}}
+    if(!best){toast('Aucun mur sur le plan');return}
+    const wa=Math.atan2(best.w.y2-best.w.y1,best.w.x2-best.w.x1)*180/Math.PI,a=((wa+45)%90+90)%90-45;
+    it.rot=Math.abs(a)<0.05?0:Math.round(a*10)/10;Store.saveMain();render();toast(it.rot?`Aligné sur le mur (${fmt(Math.round(it.rot))}°)`:'Aligné sur le mur');
+  },
   addZone:()=>{ui.tool='select';openZone(curGym().id,null)},
   zPick:d=>{const t=top_();t.draft.name=d.v;refreshSheet()},
   zAdd:()=>{
@@ -1372,7 +1410,7 @@ const ACT={
   exAdd:()=>{
     const t=top_(),name=t.draft.name.trim(),k=mkey(name);
     if(!name){toast('Donne un nom à l\'exercice');$('#mName')?.focus();return}
-    if(!S.machines[k])S.machines[k]={name,muscles:t.draft.muscles.slice(),weight:t.draft.weight,hist:[{t:Date.now(),w:t.draft.weight}]};
+    if(!S.machines[k])S.machines[k]={name,muscles:t.draft.muscles.slice(),weight:t.draft.weight,max:!!t.draft.max,hist:[{t:Date.now(),w:t.draft.weight,...(t.draft.max?{max:true}:{})}]};
     const z=S.zones[t.zk];if(z&&!z.exos.includes(k))z.exos.push(k);
     Store.saveMain();popSheet();toast(`${S.machines[k].name} ajouté à la zone`);
   },
@@ -1385,7 +1423,7 @@ const ACT={
   mAdd:()=>{
     const t=top_(),gym=getGym(t.gymId),name=t.draft.name.trim(),k=mkey(name);
     if(!name){toast('Donne un nom à la machine');$('#mName')?.focus();return}
-    if(!S.machines[k])S.machines[k]={name,muscles:t.draft.muscles.slice(),weight:t.draft.weight,hist:[{t:Date.now(),w:t.draft.weight}]};
+    if(!S.machines[k])S.machines[k]={name,muscles:t.draft.muscles.slice(),weight:t.draft.weight,max:!!t.draft.max,hist:[{t:Date.now(),w:t.draft.weight,...(t.draft.max?{max:true}:{})}]};
     const m={id:uid('m'),kind:'machine',name:S.machines[k].name,w:1.5,h:1.5,x:0,y:0};
     const M=maps.salle;let c={x:gym.w/2,y:gym.h/2};
     if(M&&M.svg.isConnected){const r=M.svg.getBoundingClientRect();c=toRoom(M,r.left+r.width/2,r.top+r.height/2)}
@@ -1394,6 +1432,7 @@ const ACT={
   },
   mDel:()=>{const t=top_(),g=getGym(t.gymId),b=getItem(g,t.mid);if(!b)return;confirmBox('Retirer du plan ?',`Le bloc « ${esc(b.name)} » sera retiré de cette salle et de ses séances. La machine reste en mémoire avec son poids.`,'Retirer',()=>{g.items=g.items.filter(x=>x.id!==b.id);S.plans.forEach(p=>{if(p.gymId===g.id)p.items=p.items.filter(i=>i.machineId!==b.id)});ui.sel=null;Store.saveMain();closeAllSheets();render()})},
   mEvo:d=>openMachineEvo(d.k),
+  wMax:()=>{const t=top_(),e=sheetEntry(t);if(!e)return;e.max=!e.max;if(e!==t.draft){trackWeight(t,e);Store.saveMain()}refreshSheet()},
   wStep:d=>{const inp=document.getElementById(d.for);if(!inp)return;inp.value=fmt(Math.max(0,Math.round((num(inp.value)+(+d.d)*2.5)*100)/100));IN.weight(inp)},
   // séances
   newPlan:()=>{if(!S.gyms.length){ACT.tab({tab:'salle'});toast('Crée d\'abord une salle');return}openPlanBuilder(null)},
@@ -1403,6 +1442,7 @@ const ACT={
   pbMus:d=>{const pb=ui.pb,i=pb.muscles.indexOf(d.m);if(i>=0){pb.muscles.splice(i,1);pb.items=pb.items.filter(it=>it.muscle!==d.m)}else pb.muscles.push(d.m);refreshSheet()},
   pbToggle:d=>{const pb=ui.pb,ex=d.e||'',i=pb.items.findIndex(it=>it.machineId===d.m&&(it.exo||'')===ex&&it.muscle===d.mu);if(i>=0)pb.items.splice(i,1);else{const at=pb.items.reduce((a,it,k)=>pb.muscles.indexOf(it.muscle)<=pb.muscles.indexOf(d.mu)?k+1:a,0);pb.items.splice(at,0,{machineId:d.m,muscle:d.mu,...(ex?{exo:ex}:{})})}refreshSheet()},
   pbSave:()=>{const pb=ui.pb;if(!pb.name.trim())pb.name=pb.muscles.map(m=>MUSCLE[m]).slice(0,3).join(' · ');const i=S.plans.findIndex(p=>p.id===pb.id);if(i>=0)S.plans[i]=clone(pb);else S.plans.push(clone(pb));Store.saveMain();closeAllSheets();ui.tab='seances';render();toast('Séance enregistrée')},
+  planToggle:d=>{ui.openPlan=ui.openPlan===d.id?null:d.id;render()},
   startPlan:d=>{if(A){openSessionView();toast('Une séance est déjà en cours');return}startSession(d.id)},
   // séance en cours
   nextMachine:()=>{A.items[A.cur].done=true;const n=A.items.findIndex((x,i)=>i>A.cur&&!x.done),f=A.items.findIndex(x=>!x.done);A.cur=n>=0?n:f>=0?f:A.cur;Store.saveSession();renderSession();$('#ssCard').scrollTop=0},
@@ -1432,7 +1472,7 @@ const IN={
   },
   weight:el=>{
     const t=top_(),e=t&&sheetEntry(t);if(!e)return;
-    e.weight=Math.max(0,num(el.value));
+    e.weight=Math.max(0,num(el.value));e.max=false;
     if(e!==t.draft){trackWeight(t,e);Store.saveMain()}
   },
   zNewName:el=>{const t=top_();t.draft.name=el.value;const sg=$('#zSug');if(sg)sg.innerHTML=zSug(t)},
